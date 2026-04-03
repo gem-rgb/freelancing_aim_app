@@ -71,3 +71,94 @@ Unauthorized: /api/auth/profile/
 Unauthorized: /api/auth/profile/
 "GET /api/auth/profile/ HTTP/1.1" 401 58
 "GET /api/listings/?featured=true&page=1 HTTP/1.1" 200 52
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+"GET /api/listings/?featured=true&page=1 HTTP/1.1" 200 52
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+"GET /api/bounties/?status=open HTTP/1.1" 200 52
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+"GET /api/listings/?featured=true&page=1 HTTP/1.1" 200 52
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+"GET /api/listings/?featured=true&page=1 HTTP/1.1" 200 52
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+"GET /api/bounties/?status=open HTTP/1.1" 200 52
+"GET /api/bounties/?status=open HTTP/1.1" 200 52
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+Bad Request: /api/listings/
+"GET /api/listings/?page=1&ordering=-created_at&category=Forex HTTP/1.1" 400 88
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+"GET /api/listings/?featured=true&page=1 HTTP/1.1" 200 52
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+"GET /api/listings/?featured=true&page=1 HTTP/1.1" 200 52
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+Bad Request: /api/listings/
+"GET /api/listings/?page=1&ordering=-created_at&category=Forex HTTP/1.1" 400 88
+Bad Request: /api/listings/
+"GET /api/listings/?page=1&ordering=-created_at&category=Crypto HTTP/1.1" 400 88
+Bad Request: /api/listings/
+"GET /api/listings/?page=1&ordering=-created_at&category=E-commerce HTTP/1.1" 400 88
+Bad Request: /api/listings/
+"GET /api/listings/?page=1&ordering=-created_at&category=Freelancing HTTP/1.1" 400 88
+Bad Request: /api/listings/
+"GET /api/listings/?page=1&ordering=-created_at&category=Affiliate HTTP/1.1" 400 88
+Bad Request: /api/listings/
+"GET /api/listings/?page=1&ordering=-created_at&category=Real+Estate HTTP/1.1" 400 88
+Bad Request: /api/listings/
+"GET /api/listings/?page=1&ordering=-created_at&category=Other HTTP/1.1" 400 88
+"GET /api/bounties/?status=open HTTP/1.1" 200 52
+"GET /api/bounties/?status=open HTTP/1.1" 200 52
+"GET /api/bounties/?status=in_progress HTTP/1.1" 200 52
+"GET /api/bounties/?status=completed HTTP/1.1" 200 52
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+"GET /api/listings/?featured=true&page=1 HTTP/1.1" 200 52
+"GET /api/listings/?featured=true&page=1 HTTP/1.1" 200 52
+"GET /api/listings/?featured=true&page=1 HTTP/1.1" 200 52
+"GET /api/listings/?featured=true&page=1 HTTP/1.1" 200 52
+"POST /api/auth/generate-username/ HTTP/1.1" 200 32
+"OPTIONS /api/auth/register/ HTTP/1.1" 200 0
+"POST /api/auth/register/ HTTP/1.1" 201 1286
+"OPTIONS /api/auth/stats/ HTTP/1.1" 200 0
+"OPTIONS /api/transactions/ HTTP/1.1" 200 0
+"OPTIONS /api/listings/my/ HTTP/1.1" 200 0
+"OPTIONS /api/listings/my/ HTTP/1.1" 200 0
+"GET /api/listings/my/ HTTP/1.1" 200 52
+"OPTIONS /api/transactions/ HTTP/1.1" 200 0
+"GET /api/transactions/ HTTP/1.1" 200 52
+"GET /api/listings/my/ HTTP/1.1" 200 52
+"GET /api/transactions/ HTTP/1.1" 200 52
+"GET /api/auth/stats/ HTTP/1.1" 200 167
+"GET /api/auth/stats/ HTTP/1.1" 200 167
