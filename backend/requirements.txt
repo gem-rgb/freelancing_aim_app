@@ -1,0 +1,20 @@
+django==6.0.3
+djangorestframework==3.17.1
+django-channels==0.7.0
+channels-redis==4.3.0
+psycopg2-binary==2.9.11
+python-dotenv==1.2.2
+boto3==1.42.81
+cryptography==46.0.6
+pycryptodome==3.23.0
+paystack-sdk==1.0.1
+redis==7.4.0
+Pillow==11.1.0
+djangorestframework-simplejwt==5.5.0
+django-cors-headers==4.6.0
+celery==5.5.0
+flower==3.0.9
+# ── Added for full feature set ─────────────────────────────────────────────
+django-filter>=23.0          # DjangoFilterBackend in listings/views.py
+requests>=2.31.0             # Paystack REST calls in transactions/paystack.py
+daphne>=4.0.0                # ASGI server for Django Channels (production)

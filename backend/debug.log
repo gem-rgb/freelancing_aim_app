@@ -1,0 +1,52 @@
+"POST /api/auth/generate-username/ HTTP/1.1" 200 32
+"POST /api/auth/register/ HTTP/1.1" 201 830
+"POST /api/auth/generate-username/ HTTP/1.1" 200 32
+Watching for file changes with StatReloader
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+Not Found: /
+"GET / HTTP/1.1" 404 3281
+Not Found: /
+"GET / HTTP/1.1" 404 3281
+Not Found: /
+"GET / HTTP/1.1" 404 3281
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+Not Found: /
+"GET / HTTP/1.1" 404 3281
+Not Found: /
+"GET / HTTP/1.1" 404 3281
+Not Found: /
+"GET / HTTP/1.1" 404 3281
+Not Found: /
+"GET / HTTP/1.1" 404 3281
+Not Found: /
+"GET / HTTP/1.1" 404 3281
+Not Found: /
+"GET / HTTP/1.1" 404 3281
+Not Found: /
+"GET / HTTP/1.1" 404 3281
+Not Found: /
+"GET / HTTP/1.1" 404 3281
+Not Found: /
+"GET / HTTP/1.1" 404 3281
+Watching for file changes with StatReloader
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+"GET /api/listings/?featured=true&page=1 HTTP/1.1" 200 52
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+"GET /api/listings/?page=1&ordering=-created_at HTTP/1.1" 200 52
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+"GET /api/bounties/?status=open HTTP/1.1" 200 52
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+"GET /api/bounties/?status=open HTTP/1.1" 200 52
+"POST /api/auth/generate-username/ HTTP/1.1" 200 34
+Unauthorized: /api/auth/profile/
+"GET /api/auth/profile/ HTTP/1.1" 401 58
+"GET /api/listings/?featured=true&page=1 HTTP/1.1" 200 52
