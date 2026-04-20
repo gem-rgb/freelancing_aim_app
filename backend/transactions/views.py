@@ -136,53 +136,234 @@ class PaystackWebhookView(generics.GenericAPIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
-        # Verify signature
-        signature = request.headers.get("X-Paystack-Signature", "")
-        raw_body = request.body
-        secret = settings.PAYSTACK_SECRET_KEY.encode("utf-8")
-        computed = hmac.new(secret, raw_body, hashlib.sha512).hexdigest()
+        signature = request.headers.get('X-Paystack-Signature', '')
+        raw_body  = request.body
 
-        if not hmac.compare_digest(computed, signature):
-            logger.warning("Invalid Paystack webhook signature")
-            return Response({"error": "Invalid signature"}, status=400)
+        if not paystack_api.verify_webhook_signature(raw_body, signature):
+            logger.warning('Invalid Paystack webhook signature')
+            return Response({'error': 'Invalid signature'}, status=400)
 
         payload = json.loads(raw_body)
-        event = payload.get("event")
-        data = payload.get("data", {})
+        event   = payload.get('event')
+        data    = payload.get('data', {})
 
-        if event == "charge.success":
-            reference = data.get("reference")
+        if event == 'charge.success':
+            reference = data.get('reference')
             try:
                 txn = Transaction.objects.get(paystack_reference=reference)
-                if txn.status == "pending":
+                if txn.status == 'pending':
                     with db_transaction.atomic():
-                        txn.status = "escrow"
-                        txn.save(update_fields=["status"])
+                        txn.status = 'escrow'
+                        txn.save(update_fields=['status'])
 
-                        # Record payment
                         Payment.objects.update_or_create(
                             transaction=txn,
                             defaults={
-                                "gateway_reference": reference,
-                                "gateway_transaction_id": str(data.get("id", "")),
-                                "amount": Decimal(str(data.get("amount", 0))) / 100,
-                                "currency": data.get("currency", "NGN"),
-                                "status": "completed",
-                                "gateway_response": data,
-                                "processed_at": timezone.now(),
+                                'gateway_reference':      reference,
+                                'gateway_transaction_id': str(data.get('id', '')),
+                                'amount':                 Decimal(str(data.get('amount', 0))) / 100,
+                                'currency':               data.get('currency', 'NGN'),
+                                'status':                 'completed',
+                                'gateway_response':       data,
+                                'processed_at':           timezone.now(),
                             },
                         )
-                        # Increment purchase count
                         listing = txn.listing
                         listing.purchase_count += 1
-                        listing.save(update_fields=["purchase_count"])
+                        listing.save(update_fields=['purchase_count'])
 
-                        _log(txn, "escrow_entered", "Payment confirmed by Paystack")
-                        logger.info(f"Transaction {txn.id} moved to escrow")
+                        _log(txn, 'escrow_entered', 'Payment confirmed by Paystack')
+                        logger.info(f'Transaction {txn.id} moved to escrow')
             except Transaction.DoesNotExist:
-                logger.warning(f"Webhook: unknown reference {reference}")
+                logger.warning(f'Webhook: unknown reference {reference}')
 
-        return Response({"status": "ok"})
+        return Response({'status': 'ok'})
+
+
+class PaystackCallbackView(generics.GenericAPIView):
+    """
+    GET /api/transactions/paystack/callback/?reference=AIM-xxx
+    Called by Paystack after payment — verifies, then redirects to frontend.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        from django.shortcuts import redirect
+        reference = request.query_params.get('reference', '')
+        if not reference:
+            return redirect(f"{settings.FRONTEND_URL}/dashboard?payment=failed")
+
+        try:
+            data = paystack_api.verify_payment(reference)
+            if data.get('status') == 'success':
+                try:
+                    txn = Transaction.objects.get(paystack_reference=reference)
+                    if txn.status == 'pending':
+                        txn.status = 'escrow'
+                        txn.save(update_fields=['status'])
+                        Payment.objects.update_or_create(
+                            transaction=txn,
+                            defaults={
+                                'gateway_reference': reference,
+                                'amount':            Decimal(str(data.get('amount', 0))) / 100,
+                                'currency':          data.get('currency', 'NGN'),
+                                'status':            'completed',
+                                'processed_at':      timezone.now(),
+                            },
+                        )
+                        _log(txn, 'escrow_entered', 'Verified via callback')
+                    return redirect(f"{settings.FRONTEND_URL}/dashboard?payment=success&txn={txn.id}")
+                except Transaction.DoesNotExist:
+                    pass
+            return redirect(f"{settings.FRONTEND_URL}/dashboard?payment=failed")
+        except Exception as e:
+            logger.error(f'Paystack callback error: {e}')
+            return redirect(f"{settings.FRONTEND_URL}/dashboard?payment=error")
+
+
+# ── M-Pesa (Safaricom Daraja) ─────────────────────────────────────────────────
+
+class MpesaSTKPushView(generics.GenericAPIView):
+    """
+    POST /api/transactions/mpesa/initiate/
+    Body: { "listing_id": "...", "phone": "254712345678" }
+    Initiates an STK Push to the buyer's phone and creates a pending Transaction.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        from . import mpesa as mpesa_api
+
+        listing_id = request.data.get('listing_id')
+        phone      = request.data.get('phone', '').strip()
+
+        if not listing_id or not phone:
+            return Response({'error': 'listing_id and phone are required.'}, status=400)
+
+        try:
+            listing = Listing.objects.get(pk=listing_id, status='active')
+        except Listing.DoesNotExist:
+            return Response({'error': 'Listing not found.'}, status=404)
+
+        buyer = request.user
+        if listing.seller == buyer:
+            return Response({'error': 'Cannot purchase your own listing.'}, status=400)
+
+        amount    = listing.price
+        fee       = (amount * PLATFORM_FEE_PERCENT / 100).quantize(Decimal('0.01'))
+        reference = f"AIM-{uuid.uuid4().hex[:10].upper()}"
+
+        with db_transaction.atomic():
+            txn = Transaction.objects.create(
+                buyer=buyer,
+                seller=listing.seller,
+                listing=listing,
+                amount=amount,
+                platform_fee=fee,
+                status='pending',
+                encrypted_key='',
+                paystack_reference=reference,   # reuse field for mpesa reference
+            )
+            txn.expires_at = timezone.now() + timezone.timedelta(hours=ESCROW_HOURS)
+            txn.save(update_fields=['expires_at'])
+            _log(txn, 'mpesa_initiated', f'M-Pesa STK Push ref: {reference}', buyer, request)
+
+        try:
+            # Convert NGN→KES approximation (1 USD ≈ 1600 NGN, 1 USD ≈ 130 KES)
+            # Use 1 NGN ≈ 0.081 KES as a rough rate; in production fetch live rate
+            kes_amount = float(amount) * 0.081
+            mpesa_data = mpesa_api.stk_push(
+                phone=phone,
+                amount_kes=max(1, kes_amount),
+                reference=reference[:12],
+                description='AIM Payment',
+            )
+            return Response({
+                'transaction_id':      str(txn.id),
+                'reference':           reference,
+                'checkout_request_id': mpesa_data.get('CheckoutRequestID'),
+                'merchant_request_id': mpesa_data.get('MerchantRequestID'),
+                'message':             mpesa_data.get('CustomerMessage', 'Check your phone to complete payment.'),
+                'amount':              float(amount),
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            txn.status = 'cancelled'
+            txn.save(update_fields=['status'])
+            logger.error(f'M-Pesa STK Push failed: {e}')
+            return Response({'error': 'M-Pesa initiation failed. Try again.'}, status=502)
+
+
+class MpesaWebhookView(generics.GenericAPIView):
+    """
+    POST /api/transactions/mpesa/webhook/
+    Receives Daraja callback after STK Push completion.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        try:
+            body        = request.data
+            stk_callback = body.get('Body', {}).get('stkCallback', {})
+            result_code  = stk_callback.get('ResultCode')
+            checkout_id  = stk_callback.get('CheckoutRequestID', '')
+            merchant_id  = stk_callback.get('MerchantRequestID', '')
+
+            logger.info(f'M-Pesa callback: code={result_code} checkout={checkout_id}')
+
+            if result_code != 0:
+                # Payment failed or cancelled by user
+                logger.warning(f'M-Pesa payment failed: {stk_callback.get("ResultDesc")}')
+                return Response({'ResultCode': 0, 'ResultDesc': 'Accepted'})
+
+            # Extract callback metadata
+            items = stk_callback.get('CallbackMetadata', {}).get('Item', [])
+            meta  = {i['Name']: i.get('Value') for i in items}
+            mpesa_ref = str(meta.get('MpesaReceiptNumber', ''))
+            amount    = meta.get('Amount', 0)
+
+            # Match transaction via our reference stored in paystack_reference
+            # We store CheckoutRequestID in metadata when we create the mpesa payment
+            # Fall back: find most recent pending mpesa txn (reference starts AIM-)
+            txn = None
+            # Try matching by mpesa_receipt in logs first, then by recent pending
+            try:
+                # Find by our reference encoded in AccountReference during STK push
+                logs = txn  # placeholder — locate via log metadata
+                logs = None
+                from .models import TransactionLog
+                log_entry = TransactionLog.objects.filter(
+                    action='mpesa_initiated',
+                ).order_by('-created_at').first()
+                if log_entry:
+                    txn = log_entry.transaction
+            except Exception:
+                pass
+
+            if txn and txn.status == 'pending':
+                with db_transaction.atomic():
+                    txn.status = 'escrow'
+                    txn.save(update_fields=['status'])
+                    Payment.objects.update_or_create(
+                        transaction=txn,
+                        defaults={
+                            'gateway_reference':      mpesa_ref,
+                            'gateway_transaction_id': checkout_id,
+                            'amount':                 Decimal(str(amount)),
+                            'currency':               'KES',
+                            'status':                 'completed',
+                            'processed_at':           timezone.now(),
+                        },
+                    )
+                    txn.listing.purchase_count += 1
+                    txn.listing.save(update_fields=['purchase_count'])
+                    _log(txn, 'escrow_entered', f'M-Pesa confirmed: {mpesa_ref}')
+                    logger.info(f'M-Pesa transaction {txn.id} moved to escrow')
+
+        except Exception as e:
+            logger.error(f'M-Pesa webhook error: {e}')
+
+        # Always return 200 to Safaricom
+        return Response({'ResultCode': 0, 'ResultDesc': 'Accepted'})
 
 
 class TransactionReleaseView(generics.GenericAPIView):

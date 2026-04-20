@@ -205,3 +205,91 @@ def get_upload_url(request, pk):
     except Exception as e:
         logger.error(f"Presigned URL error: {e}")
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ── Preview Media ─────────────────────────────────────────────────────────────
+
+from .models import ListingPreviewMedia
+from .serializers import ListingPreviewMediaSerializer, PreviewMediaPresignedUrlSerializer
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def preview_media_upload_url(request, pk):
+    """
+    POST /api/listings/<pk>/preview-media/upload-url/
+    Returns a presigned PUT URL so the frontend can upload a preview media file
+    directly to MinIO without passing through Django.
+    """
+    listing = generics.get_object_or_404(Listing, pk=pk, seller=request.user)
+    if listing.preview_media.count() >= 10:
+        return Response({"error": "Maximum 10 preview media files allowed."}, status=400)
+
+    serializer = PreviewMediaPresignedUrlSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    d = serializer.validated_data
+
+    key = f"preview/{listing.id}/{uuid.uuid4()}_{d['filename']}"
+
+    try:
+        s3 = get_s3_client()
+        presigned_url = s3.generate_presigned_url(
+            "put_object",
+            Params={
+                "Bucket": settings.AWS_STORAGE_BUCKET_NAME,
+                "Key": key,
+                "ContentType": d["content_type"],
+            },
+            ExpiresIn=900,
+        )
+        endpoint = getattr(settings, "AWS_S3_ENDPOINT_URL", "")
+        bucket   = settings.AWS_STORAGE_BUCKET_NAME
+        file_url = f"{endpoint}/{bucket}/{key}"
+
+        return Response({
+            "upload_url": presigned_url,
+            "file_url":   file_url,
+            "object_key": key,
+            "media_type": d["media_type"],
+        })
+    except Exception as e:
+        logger.error(f"Preview media presign error: {e}")
+        return Response({"error": str(e)}, status=500)
+
+
+class PreviewMediaListCreateView(generics.ListCreateAPIView):
+    """
+    GET  /api/listings/<pk>/preview-media/   — list all preview media for a listing
+    POST /api/listings/<pk>/preview-media/   — register a media record after direct upload
+    """
+    serializer_class   = ListingPreviewMediaSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        return ListingPreviewMedia.objects.filter(listing_id=self.kwargs["pk"])
+
+    def perform_create(self, serializer):
+        listing = generics.get_object_or_404(
+            Listing, pk=self.kwargs["pk"], seller=self.request.user
+        )
+        if listing.preview_media.count() >= 10:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Maximum 10 preview media files allowed.")
+        serializer.save(listing=listing)
+
+
+class PreviewMediaDetailView(generics.DestroyAPIView):
+    """DELETE /api/listings/<pk>/preview-media/<media_pk>/"""
+    serializer_class   = ListingPreviewMediaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return ListingPreviewMedia.objects.filter(
+            listing_id=self.kwargs["pk"],
+            listing__seller=self.request.user,
+        )
+
+    def get_object(self):
+        return generics.get_object_or_404(
+            self.get_queryset(), pk=self.kwargs["media_pk"]
+        )

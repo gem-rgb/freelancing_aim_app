@@ -130,8 +130,11 @@ def verify_webhook_signature(payload: bytes, signature: str) -> bool:
     """
     Verify that an incoming webhook request is genuinely from Paystack.
     """
+    secret = settings.PAYSTACK_SECRET_KEY
+    if not secret:
+        return False
     computed = hmac.new(
-        settings.PAYSTACK_SECRET_KEY.encode("utf-8"),
+        secret.encode('utf-8'),
         payload,
         hashlib.sha512,
     ).hexdigest()

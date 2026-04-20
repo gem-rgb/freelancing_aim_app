@@ -15,7 +15,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ('username', 'password', 'confirm_password', 'public_key', 'encrypted_private_key')
+        fields = ('username', 'password', 'confirm_password', 'user_type', 'public_key', 'encrypted_private_key')
+        extra_kwargs = {
+            'public_key':           {'required': False, 'default': ''},
+            'encrypted_private_key':{'required': False},
+        }
     
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
@@ -87,25 +91,70 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'id', 'username', 'public_key', 'reputation_score',
-            'stake_balance', 'is_verified', 'is_staff', 'created_at', 'updated_at',
+            'id', 'username', 'user_type', 'public_key', 'reputation_score',
+            'stake_balance', 'is_verified', 'is_staff', 'is_suspended', 'is_active',
+            'bio', 'avatar_url',
+            'created_at', 'updated_at',
             'wallet_balance', 'frozen_balance', 'wallet_address'
         )
-        read_only_fields = ('id', 'reputation_score', 'stake_balance', 'is_verified', 'is_staff', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'reputation_score', 'stake_balance', 'is_verified', 'is_staff', 'is_suspended', 'is_active', 'created_at', 'updated_at')
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('public_key', 'encrypted_private_key')
+        fields = ('public_key', 'encrypted_private_key', 'bio', 'avatar_url')
     
     def update(self, instance, validated_data):
-        # Log key changes for security
-        if 'public_key' in validated_data:
-            # In production, this should trigger security alerts
-            pass
-        
         return super().update(instance, validated_data)
+
+
+class SellerPublicProfileSerializer(serializers.ModelSerializer):
+    """Publicly visible seller profile — no sensitive fields."""
+    total_sales    = serializers.SerializerMethodField()
+    avg_rating     = serializers.SerializerMethodField()
+    total_listings = serializers.SerializerMethodField()
+    reviews        = serializers.SerializerMethodField()
+    listings       = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            'username', 'reputation_score', 'is_verified',
+            'bio', 'avatar_url', 'created_at',
+            'total_sales', 'avg_rating', 'total_listings',
+            'listings', 'reviews',
+        )
+
+    def get_total_sales(self, obj):
+        return obj.sales.filter(status__in=['released', 'escrow']).count()
+
+    def get_avg_rating(self, obj):
+        reviews = obj.reviews_received.filter(is_public=True)
+        if not reviews.exists():
+            return None
+        return round(sum(r.rating for r in reviews) / reviews.count(), 1)
+
+    def get_total_listings(self, obj):
+        return obj.listings.filter(status='active').count()
+
+    def get_listings(self, obj):
+        from listings.serializers import ListingSerializer
+        qs = obj.listings.filter(status='active').order_by('-created_at')[:12]
+        request = self.context.get('request')
+        return ListingSerializer(qs, many=True, context={'request': request}).data
+
+    def get_reviews(self, obj):
+        reviews = obj.reviews_received.filter(is_public=True).order_by('-created_at')[:20]
+        return [
+            {
+                'reviewer': r.reviewer.username,
+                'rating':   r.rating,
+                'comment':  r.comment,
+                'created_at': r.created_at.isoformat(),
+            }
+            for r in reviews
+        ]
 
 
 class KeyGenerationSerializer(serializers.Serializer):

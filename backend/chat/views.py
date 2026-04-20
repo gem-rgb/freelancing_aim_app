@@ -153,3 +153,46 @@ def get_my_key(request, room_id):
         "from_user": kx.from_user.username,
         "key_version": kx.key_version,
     })
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def create_support_room(request):
+    """Find or create a support room between the user and an admin/staff user."""
+    admin = User.objects.filter(is_staff=True).order_by("date_joined").first()
+    if not admin:
+        return Response({"error": "No support agent available."}, status=503)
+
+    if admin == request.user:
+        return Response({"error": "You are already staff."}, status=400)
+
+    # Find existing support room
+    existing = ChatRoom.objects.filter(
+        type="support",
+        participants=request.user,
+    ).filter(participants=admin).first()
+    if existing:
+        return Response(ChatRoomSerializer(existing, context={"request": request}).data)
+
+    room = ChatRoom.objects.create(type="support", name="Support Chat")
+    room.participants.add(request.user, admin)
+    return Response(
+        ChatRoomSerializer(room, context={"request": request}).data,
+        status=201,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def get_user_by_username(request, username):
+    """Return minimal user info (id, username, public_key) for chat room creation."""
+    try:
+        target = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return Response({"error": "User not found."}, status=404)
+    return Response({
+        "id": str(target.id),
+        "username": target.username,
+        "public_key": target.public_key or "",
+    })
+

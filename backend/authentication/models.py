@@ -8,13 +8,25 @@ import string
 
 
 class User(AbstractUser):
+    USER_TYPE_CHOICES = [
+        ('buyer', 'Buyer'),
+        ('seller', 'Seller'),
+    ]
+    
     username = models.CharField(max_length=50, unique=True)
     email = models.EmailField(null=True, blank=True)
-    public_key = models.TextField()
+    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='buyer')
+    public_key = models.TextField(blank=True, default='')
     encrypted_private_key = models.TextField(null=True, blank=True)
     reputation_score = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
     stake_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     is_verified = models.BooleanField(default=False)
+    is_suspended = models.BooleanField(default=False)
+    suspended_until = models.DateTimeField(null=True, blank=True)
+    suspension_reason = models.TextField(blank=True, default='')
+    termination_reason = models.TextField(blank=True, default='')
+    bio = models.TextField(blank=True, default='', help_text='Short seller bio shown on profile')
+    avatar_url = models.URLField(blank=True, default='', help_text='Profile picture URL')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -79,3 +91,23 @@ class UserSession(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.session_key[:20]}..."
+
+
+class EmailOTP(models.Model):
+    """
+    Time-limited 6-digit OTP for optional email verification during signup.
+    One OTP per user at a time (upserted on each request).
+    """
+    user       = models.OneToOneField(User, on_delete=models.CASCADE, related_name='email_otp')
+    email      = models.EmailField()
+    otp        = models.CharField(max_length=6)
+    is_used    = models.BooleanField(default=False)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_valid(self):
+        from django.utils import timezone
+        return not self.is_used and self.expires_at > timezone.now()
+
+    def __str__(self):
+        return f"OTP for {self.user.username} ({'used' if self.is_used else 'active'})"

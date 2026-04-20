@@ -27,6 +27,7 @@ urlpatterns = [
     path("api/transactions/", include('transactions.urls')),
     path("api/chat/", include('chat.urls')),
     path("api/bounties/", include('bounties.urls')),
+    path("", include('verification.urls')),
     # Simplejwt token refresh
     path("api/auth/token/refresh/", __import__('rest_framework_simplejwt.views', fromlist=['TokenRefreshView']).TokenRefreshView.as_view(), name='token_refresh'),
 ]

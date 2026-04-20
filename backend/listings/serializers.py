@@ -1,5 +1,36 @@
 from rest_framework import serializers
-from .models import Listing, Category, ListingImage, EncryptedContent, SavedListing
+from .models import Listing, Category, ListingImage, ListingPreviewMedia, EncryptedContent, SavedListing
+
+
+class ListingDemoPreviewSerializer(serializers.Serializer):
+    """Minimal public-safe view of a listing demo (no full files listing)."""
+    demo_category = serializers.CharField()
+    demo_text     = serializers.CharField()
+    demo_files    = serializers.ListField(child=serializers.DictField())
+    is_approved   = serializers.BooleanField()
+    file_count    = serializers.IntegerField()
+
+
+class ListingPreviewMediaSerializer(serializers.ModelSerializer):
+    """Public read + create for teaser media items."""
+    class Meta:
+        model = ListingPreviewMedia
+        fields = (
+            'id', 'media_type', 'file_url', 'filename',
+            'file_size', 'mime_type', 'caption', 'sort_order', 'created_at',
+        )
+        read_only_fields = ('id', 'created_at')
+
+
+class PreviewMediaPresignedUrlSerializer(serializers.Serializer):
+    """Request a presigned upload URL for a preview media file."""
+    filename     = serializers.CharField(max_length=255)
+    content_type = serializers.CharField(default='application/octet-stream')
+    file_size    = serializers.IntegerField(min_value=1, max_value=200 * 1024 * 1024)  # 200 MB max
+    media_type   = serializers.ChoiceField(
+        choices=['image', 'video', 'document', 'audio', 'other'],
+        default='image',
+    )
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -28,6 +59,8 @@ class ListingSerializer(serializers.ModelSerializer):
     encrypted_data = EncryptedContentSerializer(read_only=True)
     is_saved = serializers.SerializerMethodField()
     tags_list = serializers.SerializerMethodField()
+    demo = serializers.SerializerMethodField()
+    preview_media = ListingPreviewMediaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Listing
@@ -38,12 +71,17 @@ class ListingSerializer(serializers.ModelSerializer):
             "category", "category_name", "tags", "tags_list",
             "view_count", "purchase_count", "is_featured",
             "encrypted_data", "is_saved",
+            "demo",
+            "preview_media",
+            "verification_score", "success_rate",
             "created_at", "updated_at",
         )
         read_only_fields = (
             "id", "seller_username", "seller_reputation", "seller_public_key",
             "category_name", "view_count", "purchase_count",
-            "encrypted_data", "is_saved", "created_at", "updated_at",
+            "encrypted_data", "is_saved", "demo", "preview_media",
+            "verification_score", "success_rate",
+            "created_at", "updated_at",
         )
 
     def get_is_saved(self, obj):
@@ -56,6 +94,16 @@ class ListingSerializer(serializers.ModelSerializer):
         if obj.tags:
             return [t.strip() for t in obj.tags.split(",") if t.strip()]
         return []
+
+    def get_demo(self, obj):
+        """Return publicly-safe demo data if an approved demo exists."""
+        try:
+            demo = obj.demo
+        except Exception:
+            return None
+        if not demo or not demo.is_approved:
+            return None
+        return ListingDemoPreviewSerializer(demo).data
 
 
 class ListingCreateSerializer(serializers.ModelSerializer):
