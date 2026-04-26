@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # AIM - Anonymous Information Marketplace
 
 A secure, anonymous marketplace where sellers list verified earning strategies and buyers purchase via escrow. All content is encrypted end-to-end, ensuring complete privacy and trust.
@@ -236,8 +236,3 @@ For issues and questions:
 
 ---
 
-**Built with ❤️ for secure anonymous commerce**
-=======
-# freelancing_aim_app
-Trust Information market App
->>>>>>> 37e5f84326251e09d76f8b2c0d62ea8b4c4ec87d
