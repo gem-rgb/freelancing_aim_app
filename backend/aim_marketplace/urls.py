@@ -28,6 +28,12 @@ urlpatterns = [
     path("api/chat/", include('chat.urls')),
     path("api/bounties/", include('bounties.urls')),
     path("", include('verification.urls')),
+    # ── New module APIs ──
+    path("api/escrow/", include('escrow.urls')),
+    path("api/ratings/", include('ratings.urls')),
+    path("api/hiring/", include('manager_hiring.urls')),
+    path("api/fraud/", include('fraud_detection.urls')),
+    path("api/tasks/", include('task_engine.urls')),
     # Simplejwt token refresh
     path("api/auth/token/refresh/", __import__('rest_framework_simplejwt.views', fromlist=['TokenRefreshView']).TokenRefreshView.as_view(), name='token_refresh'),
 ]

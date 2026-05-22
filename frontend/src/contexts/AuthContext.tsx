@@ -7,7 +7,7 @@ import { EncryptionService } from '@/utils/encryption';
 interface User {
   id: number;
   username: string;
-  user_type: 'buyer' | 'seller';
+  user_type: 'buyer' | 'seller' | 'manager';
   public_key: string;
   reputation_score: number;
   stake_balance: number;
@@ -35,7 +35,7 @@ interface AuthContextType extends AuthState {
     username: string;
     password: string;
     confirm_password: string;
-    user_type: 'buyer' | 'seller';
+    user_type: 'buyer' | 'seller' | 'manager';
     email?: string;
     public_key?: string;
     encrypted_private_key?: string;
@@ -183,7 +183,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     username: string;
     password: string;
     confirm_password: string;
-    user_type: 'buyer' | 'seller';
+    user_type: 'buyer' | 'seller' | 'manager';
     email?: string;
     public_key?: string;
     encrypted_private_key?: string;

@@ -3,13 +3,38 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { 
+  Menu, 
+  X, 
+  ChevronRight, 
+  LayoutDashboard, 
+  LogOut,
+  ShoppingBag,
+  Target,
+  Cpu
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { getPostLoginDashboardPath } from '@/lib/rbac';
 
 export default function NavbarClient() {
   const { user, isAuthenticated, logout } = useAuth();
   const pathname  = usePathname();
   const router    = useRouter();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  const dashboardHref = isAuthenticated && user ? getPostLoginDashboardPath(user) : '/dashboard';
+
+  // Hide navbar in dashboard routes
+  const isDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -17,325 +42,125 @@ export default function NavbarClient() {
     setOpen(false);
   };
 
-  const active = (href: string) =>
-    pathname === href || pathname.startsWith(href + '/');
+  if (isDashboard) return null;
 
-  const isBuyer  = user?.user_type === 'buyer';
-  const isSeller = user?.user_type === 'seller';
-  const isStaff  = user?.is_staff;
-
-  // ── Nav links differ by auth state & role ──
-  // Public (not logged in): marketing links
   const publicLinks = [
-    { href: '/listings', label: 'Marketplace' },
-    { href: '/bounties',  label: 'Bounties'    },
-    { href: '/features',  label: 'Features'    },
+    { href: '/listings', label: 'Marketplace', icon: ShoppingBag },
+    { href: '/bounties', label: 'Bounties', icon: Target },
+    { href: '/features', label: 'Technology', icon: Cpu },
   ];
-
-  // Buyer: marketplace + bounties only
-  const buyerLinks = [
-    { href: '/listings', label: 'Marketplace' },
-    { href: '/bounties',  label: 'Bounties'    },
-  ];
-
-  // Seller: their listings + bounties (can fulfil bounties too)
-  const sellerLinks = [
-    { href: '/dashboard', label: 'My Listings'  },
-    { href: '/bounties',   label: 'Bounties'    },
-    { href: '/listings',   label: 'Browse'      },
-  ];
-
-  // Staff: everything
-  const staffLinks = [
-    { href: '/listings',         label: 'Marketplace' },
-    { href: '/bounties',          label: 'Bounties'    },
-    { href: '/admin/dashboard',   label: 'Admin'       },
-  ];
-
-  const navLinks = !isAuthenticated
-    ? publicLinks
-    : isStaff   ? staffLinks
-    : isSeller  ? sellerLinks
-    : buyerLinks;
-
-  const mobileLinks = navLinks;
-
-  const linkStyle = (href: string): React.CSSProperties => ({
-    padding: '0.3rem 0.7rem',
-    borderRadius: '5px',
-    fontSize: '0.8rem',
-    fontWeight: active(href) ? 600 : 500,
-    color:      active(href) ? '#f79a32' : '#8a7359',
-    background: active(href) ? 'rgba(247,154,50,0.1)' : 'transparent',
-    border: '1px solid',
-    borderColor: active(href) ? 'rgba(247,154,50,0.22)' : 'transparent',
-    transition: 'all 0.15s ease',
-    textDecoration: 'none',
-  });
 
   return (
     <nav
-      role="navigation"
-      aria-label="Main navigation"
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        background: 'rgba(34, 26, 15, 0.96)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(75,52,34,0.5)',
-      }}
+      className={cn(
+        "fixed top-0 w-full z-[100] transition-all duration-300 border-b",
+        scrolled 
+          ? "bg-black/80 backdrop-blur-xl border-white/5 py-3" 
+          : "bg-transparent border-transparent py-5"
+      )}
     >
-      <div className="container">
-        <div style={{ display: 'flex', alignItems: 'center', height: '50px', gap: '1rem' }}>
+      <div className="container mx-auto px-4 flex items-center justify-between">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
+            <span className="text-white font-black text-sm">AIM</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-white font-black text-lg tracking-tighter uppercase leading-none">Marketplace</span>
+            <span className="text-[9px] text-blue-400 font-black uppercase tracking-[0.2em] leading-none mt-1">E2EE Protocol</span>
+          </div>
+        </Link>
 
-          {/* ── Logo → dashboard if logged in ─────────────────── */}
-          <Link
-            href={isAuthenticated
-              ? isStaff   ? '/admin/dashboard'
-              : isSeller  ? '/dashboard/seller'
-              : '/dashboard/buyer'
-              : '/'}
-            aria-label="AIM Marketplace — Home"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', flexShrink: 0 }}
-          >
-            <div style={{
-              width: '26px', height: '26px',
-              borderRadius: '7px',
-              background: 'linear-gradient(135deg, #f79a32 0%, #dc3d22 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontWeight: 800, fontSize: '0.8125rem',
-              flexShrink: 0,
-            }}>
-              A
+        {/* Desktop Links */}
+        <div className="hidden md:flex items-center gap-8">
+          {publicLinks.map((link) => (
+            <Link 
+              key={link.href} 
+              href={link.href}
+              className={cn(
+                "text-sm font-bold transition-colors hover:text-blue-400",
+                pathname === link.href ? "text-blue-400" : "text-slate-400"
+              )}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-4">
+          {isAuthenticated ? (
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" className="hidden lg:flex font-bold text-slate-400 hover:text-white" asChild>
+                <Link href={dashboardHref}>
+                  <LayoutDashboard className="w-4 h-4 mr-2" />
+                  Dashboard
+                </Link>
+              </Button>
+              <Button className="rounded-full bg-white text-black font-black hover:bg-gray-200" asChild>
+                <Link href={dashboardHref}>
+                  Account <ChevronRight className="w-4 h-4 ml-1" />
+                </Link>
+              </Button>
             </div>
-            <span style={{ color: '#d3af86', fontWeight: 700, fontSize: '0.9rem', letterSpacing: '-0.01em' }}>
-              AIM
-            </span>
-          </Link>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" className="hidden sm:flex font-bold text-slate-400 hover:text-white" asChild>
+                <Link href="/login">Sign In</Link>
+              </Button>
+              <Button className="rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold px-6" asChild>
+                <Link href="/register">Join AIM</Link>
+              </Button>
+            </div>
+          )}
 
-          {/* ── Divider ─────────────────────────────────────────── */}
-          <div style={{ width: '1px', height: '18px', background: 'rgba(75,52,34,0.6)', flexShrink: 0 }} />
-
-          {/* ── Nav links (desktop) ─────────────────────────────── */}
-          <div
-            style={{ display: 'flex', alignItems: 'center', gap: '0.15rem', flex: 1 }}
-            className="nav-desktop-links"
+          {/* Mobile Menu Toggle */}
+          <button 
+            className="md:hidden text-white p-2"
+            onClick={() => setOpen(!open)}
           >
-            {navLinks.map(link => (
-              <Link key={link.href} href={link.href} style={linkStyle(link.href)}>
+            {open ? <X /> : <Menu />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      {open && (
+        <div className="md:hidden absolute top-full left-0 w-full bg-[#050505]/95 backdrop-blur-2xl border-b border-white/5 p-6 animate-in slide-in-from-top duration-300">
+          <div className="flex flex-col gap-6">
+            {publicLinks.map((link) => (
+              <Link 
+                key={link.href} 
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className="text-2xl font-black text-white hover:text-blue-400 transition-colors"
+              >
                 {link.label}
               </Link>
             ))}
-
-            {/* Seller: quick "Create Listing" CTA in nav */}
-            {isAuthenticated && isSeller && (
-              <Link
-                href="/dashboard/create"
-                style={{
-                  ...linkStyle('/dashboard/create'),
-                  marginLeft: '0.25rem',
-                  background: active('/dashboard/create') ? 'rgba(247,154,50,0.15)' : 'rgba(136,155,74,0.08)',
-                  borderColor: active('/dashboard/create') ? 'rgba(247,154,50,0.3)' : 'rgba(136,155,74,0.25)',
-                  color: active('/dashboard/create') ? '#f79a32' : '#a0b85e',
-                }}
-              >
-                + New Listing
-              </Link>
-            )}
-          </div>
-
-          {/* ── Right side ──────────────────────────────────────── */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginLeft: 'auto', flexShrink: 0 }}>
+            <div className="h-[1px] bg-white/5 my-2" />
             {isAuthenticated ? (
               <>
-                {/* Role badge */}
-                {!isStaff && (
-                  <span style={{
-                    padding: '0.15rem 0.5rem',
-                    borderRadius: '999px',
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    background: isSeller ? 'rgba(136,155,74,0.12)' : 'rgba(57,173,181,0.1)',
-                    border: `1px solid ${isSeller ? 'rgba(136,155,74,0.3)' : 'rgba(57,173,181,0.25)'}`,
-                    color: isSeller ? '#a0b85e' : '#39adb5',
-                    letterSpacing: '0.03em',
-                  }}>
-                    {isSeller ? 'SELLER' : 'BUYER'}
-                  </span>
-                )}
-
-                {/* Dashboard / avatar link */}
-                <Link
-                  href="/dashboard"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.45rem',
-                    padding: '0.28rem 0.7rem',
-                    borderRadius: '7px',
-                    background: '#3c2818',
-                    border: '1px solid #4b3422',
-                    textDecoration: 'none',
-                    fontSize: '0.775rem',
-                    color: '#c0a472',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <div style={{
-                    width: '18px', height: '18px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #f79a32 0%, #dc3d22 100%)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '0.55rem', fontWeight: 800, color: '#fff', flexShrink: 0,
-                  }}>
-                    {user?.username?.[0]?.toUpperCase()}
-                  </div>
-                  <span style={{ maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {user?.username}
-                  </span>
+                <Link href={dashboardHref} className="text-xl font-bold text-white flex items-center gap-2">
+                  <LayoutDashboard className="w-5 h-5 text-blue-500" /> Dashboard
                 </Link>
-
-                <button
-                  onClick={handleLogout}
-                  aria-label="Sign out"
-                  style={{
-                    padding: '0.28rem 0.7rem',
-                    borderRadius: '5px',
-                    fontSize: '0.775rem',
-                    fontWeight: 500,
-                    color: '#8a7359',
-                    background: 'transparent',
-                    border: '1px solid transparent',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  Sign out
+                <button onClick={handleLogout} className="text-xl font-bold text-red-500 flex items-center gap-2">
+                  <LogOut className="w-5 h-5" /> Sign Out
                 </button>
               </>
             ) : (
-              <>
-                <Link
-                  href="/login"
-                  style={{
-                    padding: '0.28rem 0.7rem',
-                    borderRadius: '5px',
-                    fontSize: '0.775rem',
-                    fontWeight: 500,
-                    color: '#8a7359',
-                    background: 'transparent',
-                    border: '1px solid transparent',
-                    textDecoration: 'none',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  Sign in
-                </Link>
-                <Link href="/register" className="btn btn-primary btn-sm">
-                  Create account
-                </Link>
-              </>
+              <div className="flex flex-col gap-4">
+                <Button className="w-full h-14 rounded-2xl bg-blue-600 font-bold" asChild>
+                  <Link href="/register">Create Account</Link>
+                </Button>
+                <Button variant="outline" className="w-full h-14 rounded-2xl border-white/10 font-bold" asChild>
+                  <Link href="/login">Sign In</Link>
+                </Button>
+              </div>
             )}
-
-            {/* ── Mobile toggle ──────────────────────────────── */}
-            <button
-              onClick={() => setOpen(!open)}
-              aria-label="Toggle menu"
-              aria-expanded={open}
-              style={{
-                padding: '0.35rem',
-                borderRadius: '5px',
-                color: '#8a7359',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-              }}
-              className="nav-mobile-toggle"
-            >
-              <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {open
-                  ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                }
-              </svg>
-            </button>
           </div>
         </div>
-
-        {/* ── Mobile menu ─────────────────────────────────────────── */}
-        {open && (
-          <div style={{
-            padding: '0.6rem 0 0.875rem',
-            borderTop: '1px solid rgba(75,52,34,0.4)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.2rem',
-          }}>
-            {mobileLinks.map(link => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                style={{
-                  padding: '0.45rem 0.75rem',
-                  borderRadius: '5px',
-                  fontSize: '0.8125rem',
-                  color: active(link.href) ? '#f79a32' : '#c0a472',
-                  background: active(link.href) ? 'rgba(247,154,50,0.08)' : 'transparent',
-                  textDecoration: 'none',
-                }}
-              >
-                {link.label}
-              </Link>
-            ))}
-            {isAuthenticated && isSeller && (
-              <Link
-                href="/dashboard/create"
-                onClick={() => setOpen(false)}
-                style={{
-                  padding: '0.45rem 0.75rem',
-                  borderRadius: '5px',
-                  fontSize: '0.8125rem',
-                  color: '#a0b85e',
-                  textDecoration: 'none',
-                }}
-              >
-                + New Listing
-              </Link>
-            )}
-            {isAuthenticated && (
-              <Link
-                href="/dashboard"
-                onClick={() => setOpen(false)}
-                style={{
-                  padding: '0.45rem 0.75rem',
-                  borderRadius: '5px',
-                  fontSize: '0.8125rem',
-                  color: active('/dashboard') ? '#f79a32' : '#c0a472',
-                  textDecoration: 'none',
-                }}
-              >
-                Dashboard
-              </Link>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Responsive styles */}
-      <style>{`
-        @media (max-width: 767px) {
-          .nav-desktop-links { display: none !important; }
-        }
-        @media (min-width: 768px) {
-          .nav-mobile-toggle { display: none !important; }
-        }
-      `}</style>
-
-      <div className="sr-only" role="status" aria-live="polite">
-        {isAuthenticated ? `Logged in as ${user?.username} (${user?.user_type})` : 'Not logged in'}
-      </div>
+      )}
     </nav>
   );
 }

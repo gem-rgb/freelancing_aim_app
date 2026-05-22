@@ -4,6 +4,26 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { apiService } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { 
+  Target, 
+  PlusCircle, 
+  Clock, 
+  MessageSquare, 
+  TrendingUp, 
+  AlertCircle, 
+  Zap, 
+  Trophy,
+  ArrowRight,
+  Filter,
+  CheckCircle2,
+  Calendar
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Bounty {
   id: string; title: string; description: string; reward: number;
@@ -12,44 +32,62 @@ interface Bounty {
   submission_count: number; view_count: number; deadline: string | null; created_at: string;
 }
 
-const PRIORITY_STYLE: Record<string, { bg: string; color: string; border: string }> = {
-  urgent: { bg: 'rgba(220,61,34,0.12)',  color: '#f2704a', border: 'rgba(220,61,34,0.28)'  },
-  high:   { bg: 'rgba(247,154,50,0.12)', color: '#f79a32', border: 'rgba(247,154,50,0.28)' },
-  medium: { bg: 'rgba(247,154,50,0.08)', color: '#c0a472', border: 'rgba(247,154,50,0.2)'  },
-  low:    { bg: 'rgba(138,115,89,0.1)',  color: '#8a7359', border: 'rgba(138,115,89,0.2)'  },
+const PRIORITY_CONFIG: Record<string, { color: string; bg: string; icon: any }> = {
+  urgent: { color: 'text-red-500', bg: 'bg-red-500/10', icon: Zap },
+  high:   { color: 'text-blue-500', bg: 'bg-blue-500/10', icon: TrendingUp },
+  medium: { color: 'text-blue-500', bg: 'bg-blue-500/10', icon: Target },
+  low:    { color: 'text-slate-500', bg: 'bg-slate-500/10', icon: Clock },
 };
 
 function BountyCard({ bounty }: { bounty: Bounty }) {
-  const p = PRIORITY_STYLE[bounty.priority] || PRIORITY_STYLE.low;
+  const config = PRIORITY_CONFIG[bounty.priority] || PRIORITY_CONFIG.low;
+  const PriorityIcon = config.icon;
+
   return (
-    <Link href={`/bounties/${bounty.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-      <div className="card" style={{ height: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-          <span style={{ fontSize: '0.675rem', fontWeight: 600, padding: '0.2rem 0.55rem', borderRadius: '999px', background: p.bg, color: p.color, border: `1px solid ${p.border}`, textTransform: 'capitalize' }}>
-            {bounty.priority}
-          </span>
-          <span style={{ fontSize: '0.675rem', color: '#5c4228' }}>{bounty.submission_count} submission{bounty.submission_count !== 1 ? 's' : ''}</span>
-        </div>
-        <h3 className="line-clamp-2" style={{ fontSize: '0.875rem', marginBottom: '0.4rem' }}>{bounty.title}</h3>
-        <p className="line-clamp-2" style={{ fontSize: '0.775rem', color: '#8a7359', marginBottom: '0.6rem' }}>{bounty.description}</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginBottom: '0.6rem' }}>
-          {bounty.tags_list.slice(0, 3).map(tag => (
-            <span key={tag} style={{ fontSize: '0.675rem', color: '#8a7359', background: 'rgba(75,52,34,0.5)', padding: '0.15rem 0.45rem', borderRadius: '999px' }}>#{tag}</span>
-          ))}
-        </div>
-        {bounty.deadline && (
-          <p style={{ fontSize: '0.7rem', color: '#5c4228', marginBottom: '0.6rem' }}>⏰ Deadline: {new Date(bounty.deadline).toLocaleDateString()}</p>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(75,52,34,0.4)', paddingTop: '0.6rem' }}>
-          <div>
-            <p className="text-gradient" style={{ fontSize: '1rem', fontWeight: 800 }}>₦{Number(bounty.reward).toLocaleString()}</p>
-            <p style={{ fontSize: '0.675rem', color: '#5c4228', marginTop: '0.1rem' }}>by {bounty.buyer_username}</p>
+    <Link href={`/bounties/${bounty.id}`}>
+      <Card className="glass border-white/5 overflow-hidden group hover:border-blue-500/20 transition-all hover-glow h-full flex flex-col">
+        <CardContent className="p-6 flex-1 flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <Badge variant="outline" className={cn("rounded-full px-3 py-1 font-black text-[9px] uppercase tracking-widest border-transparent", config.bg, config.color)}>
+              <PriorityIcon className="w-3 h-3 mr-1.5" />
+              {bounty.priority} Priority
+            </Badge>
+            <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">{bounty.submission_count} Solutions</span>
           </div>
-          <span style={{ fontSize: '0.725rem', fontWeight: 600, padding: '0.25rem 0.65rem', borderRadius: '5px', background: 'rgba(247,154,50,0.1)', color: '#f79a32', border: '1px solid rgba(247,154,50,0.22)' }}>
-            Submit →
-          </span>
-        </div>
-      </div>
+
+          <div className="flex-1 space-y-3">
+            <h3 className="text-lg font-black text-white leading-tight line-clamp-2 group-hover:text-blue-400 transition-colors">
+              {bounty.title}
+            </h3>
+            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+              {bounty.description}
+            </p>
+            
+            <div className="flex flex-wrap gap-1.5 py-2">
+                {bounty.tags_list.slice(0, 3).map(tag => (
+                  <span key={tag} className="text-[9px] font-bold text-muted-foreground/60 uppercase">#{tag}</span>
+                ))}
+            </div>
+          </div>
+
+          {bounty.deadline && (
+            <div className="mt-4 flex items-center gap-2 text-[10px] font-black text-blue-500/60 uppercase tracking-widest">
+                <Calendar className="w-3 h-3" />
+                Ends: {new Date(bounty.deadline).toLocaleDateString()}
+            </div>
+          )}
+
+          <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
+            <div>
+                <p className="text-xl font-black text-white tracking-tighter">₦{Number(bounty.reward).toLocaleString()}</p>
+                <p className="text-[10px] font-black text-muted-foreground uppercase mt-1">Requested by @{bounty.buyer_username}</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                <ArrowRight className="w-5 h-5 text-blue-500 group-hover:text-white" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </Link>
   );
 }
@@ -82,98 +120,130 @@ export default function BountiesPage() {
   };
 
   const STATUS_TABS = [
-    { key: 'open',        label: 'Open'        },
-    { key: 'in_progress', label: 'In Progress'  },
-    { key: 'completed',   label: 'Completed'    },
+    { key: 'open',        label: 'Active Bounties' },
+    { key: 'in_progress', label: 'In Verification'  },
+    { key: 'completed',   label: 'Fulfilled'    },
   ];
 
   return (
-    <main style={{ minHeight: '100vh' }}>
+    <main className="min-h-screen pb-24 pt-32">
       {/* Header */}
-      <section style={{ borderBottom: '1px solid rgba(75,52,34,0.4)', background: 'rgba(44,31,18,0.4)', padding: '2rem 0 1.5rem' }}>
-        <div className="container" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h1 style={{ marginBottom: '0.3rem' }}>
-              <span className="text-gradient">Bounty</span> Board
+      <section className="bg-white/5 border-b border-white/5 py-16 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-black text-white tracking-tight">
+              Bounty <span className="text-blue-500">Board</span>
             </h1>
-            <p style={{ fontSize: '0.8375rem', color: '#8a7359' }}>
-              Post a problem, receive encrypted solutions. Pay only on acceptance.
+            <p className="text-muted-foreground font-medium max-w-md">
+              Broadcast your intelligence requirements to the network. Guaranteed escrow payout upon verified delivery.
             </p>
           </div>
           {isAuthenticated && (
-            <button onClick={() => setShowCreate(true)} id="post-bounty-btn" className="btn btn-primary btn-lg">
-              + Post a Bounty
-            </button>
+            <Button size="lg" className="h-14 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-500/20" onClick={() => setShowCreate(true)}>
+              <PlusCircle className="w-5 h-5 mr-3" /> Post New Bounty
+            </Button>
           )}
         </div>
       </section>
 
-      <div className="container" style={{ paddingTop: '1.5rem', paddingBottom: '3rem' }}>
-        {/* Status tabs */}
-        <div style={{ display: 'flex', gap: '0.3rem', marginBottom: '1.25rem' }}>
-          {STATUS_TABS.map(t => (
-            <button
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+        {/* Filter Tabs */}
+        <div className="flex items-center gap-2 p-1 bg-white/5 rounded-2xl w-fit">
+          {STATUS_TABS.map((t) => (
+            <Button
               key={t.key}
+              variant="ghost"
+              size="sm"
               onClick={() => setStatus(t.key)}
-              style={{
-                padding: '0.3rem 0.85rem', borderRadius: '5px',
-                fontSize: '0.775rem', fontWeight: 500, cursor: 'pointer', border: '1px solid',
-                background:   status === t.key ? 'rgba(247,154,50,0.15)' : '#3c2818',
-                color:        status === t.key ? '#f79a32'               : '#8a7359',
-                borderColor:  status === t.key ? 'rgba(247,154,50,0.4)'  : '#4b3422',
-                transition: 'all 0.15s ease',
-              }}
+              className={cn(
+                "rounded-xl px-6 py-5 font-bold uppercase text-[10px] tracking-widest transition-all",
+                status === t.key ? "bg-white/10 text-white shadow-xl" : "text-muted-foreground hover:text-white"
+              )}
             >
               {t.label}
-            </button>
+            </Button>
           ))}
         </div>
 
+        {/* Bounties Grid */}
         {loading ? (
-          <div className="grid-container grid-responsive">
-            {[...Array(6)].map((_, i) => <div key={i} style={{ background: '#3c2818', borderRadius: '13px', height: '180px', opacity: 0.6 }} />)}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-[280px] bg-white/5 border border-white/5 rounded-3xl animate-pulse" />
+            ))}
           </div>
         ) : bounties.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-            <p style={{ color: '#5c4228', fontSize: '0.9rem' }}>No bounties found. Be the first to post one!</p>
+          <div className="text-center py-32 space-y-6">
+            <div className="w-20 h-20 bg-white/5 rounded-[2rem] flex items-center justify-center mx-auto border border-white/5">
+                <Trophy className="w-8 h-8 text-muted-foreground/30" />
+            </div>
+            <div className="space-y-2">
+                <p className="text-white font-black uppercase tracking-tight text-xl">The Board is Empty</p>
+                <p className="text-muted-foreground text-sm">Post a bounty to crowdsource the intelligence you need.</p>
+            </div>
           </div>
         ) : (
-          <div className="grid-container grid-responsive">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-700 slide-in-from-bottom-4">
             {bounties.map(b => <BountyCard key={b.id} bounty={b} />)}
           </div>
         )}
       </div>
 
-      {/* Create Bounty Modal */}
-      {showCreate && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999, padding: '1rem', overflowY: 'auto' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '480px', padding: '1.5rem', margin: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-              <h2 style={{ fontSize: '1rem' }}>Post a Bounty</h2>
-              <button onClick={() => setShowCreate(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8a7359', fontSize: '1.25rem', lineHeight: 1 }}>✕</button>
-            </div>
-            <form onSubmit={createBounty} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <input required value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="Bounty title" style={{ width: '100%' }} />
-              <textarea required value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={3} placeholder="What problem do you need solved?" style={{ width: '100%', resize: 'none' }} />
-              <textarea required value={form.requirements} onChange={e => setForm(p => ({ ...p, requirements: e.target.value }))} rows={2} placeholder="Detailed requirements for the solution" style={{ width: '100%', resize: 'none' }} />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                <input required type="number" min="100" value={form.reward} onChange={e => setForm(p => ({ ...p, reward: e.target.value }))} placeholder="Reward (₦)" style={{ width: '100%' }} />
-                <select value={form.priority} onChange={e => setForm(p => ({ ...p, priority: e.target.value }))} style={{ width: '100%' }}>
-                  <option value="low">Low Priority</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                </select>
+      {/* Create Bounty Dialog */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="glass border-white/10 sm:max-w-[500px] p-0 overflow-hidden">
+          <form onSubmit={createBounty}>
+            <div className="p-8 space-y-6">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                    <PlusCircle className="w-6 h-6 text-blue-500" />
+                    Post Bounty
+                </DialogTitle>
+                <DialogDescription className="text-muted-foreground font-bold uppercase tracking-widest text-[10px]">
+                    Define your intelligence requirements
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Bounty Objective</label>
+                    <Input required value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Verified Nigerian E-commerce traffic strategy" className="h-12 bg-white/5 border-white/10 rounded-xl font-bold" />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Full Description</label>
+                    <textarea required value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={3} placeholder="Describe the specific problem or strategy you need..." className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white font-medium focus:outline-none focus:border-blue-500/50 resize-none transition-all" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Reward (₦)</label>
+                        <Input required type="number" min="100" value={form.reward} onChange={e => setForm(p => ({ ...p, reward: e.target.value }))} className="h-12 bg-white/5 border-white/10 rounded-xl font-black text-lg" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Priority</label>
+                        <select value={form.priority} onChange={e => setForm(p => ({ ...p, priority: e.target.value }))} className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-white font-bold appearance-none focus:outline-none focus:border-blue-500/50">
+                            <option value="low" className="bg-slate-900">Low</option>
+                            <option value="medium" className="bg-slate-900">Medium</option>
+                            <option value="high" className="bg-slate-900">High</option>
+                            <option value="urgent" className="bg-slate-900">Urgent</option>
+                        </select>
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Deadline (Optional)</label>
+                    <Input type="datetime-local" value={form.deadline} onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))} className="h-12 bg-white/5 border-white/10 rounded-xl text-white" />
+                </div>
               </div>
-              <input value={form.tags} onChange={e => setForm(p => ({ ...p, tags: e.target.value }))} placeholder="Tags (comma-separated)" style={{ width: '100%' }} />
-              <input type="datetime-local" value={form.deadline} onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))} style={{ width: '100%' }} />
-              <button type="submit" disabled={submitting} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', opacity: submitting ? 0.6 : 1 }}>
-                {submitting ? 'Posting…' : 'Post Bounty'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <DialogFooter className="pt-4 gap-3">
+                <Button variant="ghost" className="rounded-xl font-bold" type="button" onClick={() => setShowCreate(false)}>Cancel</Button>
+                <Button type="submit" disabled={submitting} className="h-12 px-8 rounded-xl bg-blue-600 hover:bg-blue-700 font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-500/20">
+                    {submitting ? "Broadcasting..." : "Broadcast Bounty"}
+                </Button>
+              </DialogFooter>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

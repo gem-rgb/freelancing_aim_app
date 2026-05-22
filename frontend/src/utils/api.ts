@@ -217,6 +217,55 @@ class ApiService {
   async adminEscrowLogs() { return this.client.get('/auth/admin/logs/escrow/'); }
   async adminGetAllListings(params?: Record<string, unknown>) { return this.client.get('/listings/', { params: { page_size: 200, ...params } }); }
   async adminGetAllTransactions() { return this.client.get('/transactions/', { params: { page_size: 200 } }); }
+
+  // ── Escrow & Staking ────────────────────────────────────────────────────
+  async getEscrowAccount() { return this.client.get('/escrow/account/'); }
+  async getEscrowStakes() { return this.client.get('/escrow/stakes/'); }
+  async getEscrowStake(id: string) { return this.client.get(`/escrow/stakes/${id}/`); }
+  async getStakeEvents(stakeId: string) { return this.client.get(`/escrow/stakes/${stakeId}/events/`); }
+  async getEscrowSummary() { return this.client.get('/escrow/summary/'); }
+
+  // ── Ratings & Trust ─────────────────────────────────────────────────────
+  async getMyTrustProfile() { return this.client.get('/ratings/me/'); }
+  async getSellerTrust(username: string) { return this.client.get(`/ratings/seller/${username}/`); }
+  async getSellerTrustHistory(username: string) { return this.client.get(`/ratings/seller/${username}/history/`); }
+  async submitTrustVote(data: { seller_username: string; vote: string; reason?: string }) { return this.client.post('/ratings/vote/', data); }
+  async recalculateMyTrust() { return this.client.post('/ratings/recalculate/'); }
+
+  // ── Fraud Detection ─────────────────────────────────────────────────────
+  async getProductFingerprint(listingId: string) { return this.client.get(`/fraud/fingerprint/${listingId}/`); }
+  async getDuplicateScans(listingId: string) { return this.client.get(`/fraud/duplicates/${listingId}/`); }
+  async getOwnershipLineage(listingId: string) { return this.client.get(`/fraud/lineage/${listingId}/`); }
+  async getReuploadAlerts() { return this.client.get('/fraud/alerts/'); }
+  async submitFraudReport(data: { reported_user?: number; reported_listing?: string; report_type: string; description: string; evidence?: unknown[] }) { return this.client.post('/fraud/reports/', data); }
+  async getMyFraudReports() { return this.client.get('/fraud/reports/mine/'); }
+  async getFraudStats() { return this.client.get('/fraud/stats/'); }
+
+  // ── Task Engine (Manager) ───────────────────────────────────────────────
+  async getManagerProfile() { return this.client.get('/tasks/profile/'); }
+  async getAssignedTasks() { return this.client.get('/tasks/assigned/'); }
+  async getTaskQueue(params?: { status?: string }) { return this.client.get('/tasks/queue/', { params }); }
+  async getTaskDetail(id: string) { return this.client.get(`/tasks/${id}/`); }
+  async submitTaskReview(taskId: string, data: { decision: string; score: number; notes?: string; duration_minutes?: number }) { return this.client.post(`/tasks/${taskId}/review/`, data); }
+  async getTaskConsensus(listingId: string) { return this.client.get(`/tasks/consensus/${listingId}/`); }
+  async getManagerDashboardStats() { return this.client.get('/tasks/stats/'); }
+
+  // ── Manager Hiring ──────────────────────────────────────────────────────
+  async submitManagerApplication(data: { resume_file_url?: string; resume_format?: string; cover_letter?: string }) { return this.client.post('/hiring/apply/', data); }
+  async getMyApplications() { return this.client.get('/hiring/applications/'); }
+  async getApplicationDetail(id: string) { return this.client.get(`/hiring/applications/${id}/`); }
+  async getMyInterviews() { return this.client.get('/hiring/interviews/'); }
+  async getInterviewDetail(id: string) { return this.client.get(`/hiring/interviews/${id}/`); }
+  async submitInterviewAnswer(questionId: string, data: { answer_text: string; typing_speed_wpm?: number; time_to_answer_seconds?: number }) { return this.client.post(`/hiring/questions/${questionId}/answer/`, data); }
+  async getHiringStats() { return this.client.get('/hiring/stats/'); }
+
+  // ── ML-Triggered Hiring Pipelines ──────────────────────────────────
+  async processResume(applicationId: string, resumeText?: string) {
+    return this.client.post(`/hiring/applications/${applicationId}/process-resume/`, { resume_text: resumeText });
+  }
+  async generateInterview(applicationId: string) {
+    return this.client.post(`/hiring/applications/${applicationId}/generate-interview/`);
+  }
 }
 
 export const apiService = new ApiService();

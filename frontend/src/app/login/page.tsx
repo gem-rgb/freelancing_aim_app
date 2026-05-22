@@ -4,6 +4,21 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { getPostLoginDashboardPath } from '@/lib/rbac';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { 
+  ShieldCheck, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  User, 
+  ArrowRight,
+  AlertCircle
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function LoginPage() {
   const [username, setUsername]         = useState('');
@@ -16,15 +31,11 @@ export default function LoginPage() {
 
   const error = localError || authError;
 
-  /* ── If already logged in, skip login → go to their dashboard ── */
   useEffect(() => {
     if (!authLoading && isAuthenticated && user) {
-      // Staff should always go through /admin/login
-      if (user.is_staff) { router.replace('/admin/dashboard'); return; }
-      const dest = user.user_type === 'seller' ? '/dashboard/seller' : '/dashboard/buyer';
-      router.replace(dest);
+      router.replace(getPostLoginDashboardPath(user));
     }
-  }, [authLoading, isAuthenticated, user]);
+  }, [authLoading, isAuthenticated, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,8 +44,7 @@ export default function LoginPage() {
     setLocalError('');
     try {
       const loggedInUser = await login(username, password);
-      const dest = loggedInUser?.user_type === 'seller' ? '/dashboard/seller' : '/dashboard/buyer';
-      router.replace(dest);
+      router.replace(getPostLoginDashboardPath(loggedInUser));
     } catch (err: any) {
       const data = err.response?.data;
       if (err.response?.status === 403 && data?.detail) {
@@ -44,106 +54,113 @@ export default function LoginPage() {
     finally { setIsLoading(false); }
   };
 
-  /* Show spinner while auth state loads */
   if (authLoading) return (
-    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="spinner" style={{ width: '28px', height: '28px' }} />
-    </main>
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Resuming Protocol Session...</p>
+    </div>
   );
 
-  /* If authenticated, show nothing while redirect fires */
   if (isAuthenticated) return null;
 
   return (
-    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.25rem', position: 'relative', overflow: 'hidden' }}>
-      {/* Ambient glows */}
-      <div style={{ position: 'absolute', top: '-80px', left: '-80px', width: '300px', height: '300px', borderRadius: '50%', background: 'rgba(247,154,50,0.06)', filter: 'blur(80px)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: '-60px', right: '-60px', width: '240px', height: '240px', borderRadius: '50%', background: 'rgba(220,61,34,0.05)', filter: 'blur(70px)', pointerEvents: 'none' }} />
+    <main className="min-h-screen flex items-center justify-center p-6 pt-32 relative overflow-hidden bg-background">
+      {/* Background elements */}
+      <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
 
-      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '360px' }}>
-
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-          <Link href="/" aria-label="AIM — Home" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', marginBottom: '1.25rem' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '7px', background: 'linear-gradient(135deg,#f79a32,#dc3d22)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.875rem' }}>A</div>
-            <span style={{ color: '#d3af86', fontWeight: 700, fontSize: '0.9375rem' }}>AIM</span>
-          </Link>
-          <h1 style={{ fontSize: '1.375rem', marginBottom: '0.25rem' }}>Welcome back</h1>
-          <p style={{ fontSize: '0.8rem', color: '#8a7359' }}>Sign in to your anonymous account</p>
+      <div className="w-full max-w-[400px] space-y-8 relative z-10 animate-fade-in">
+        {/* Brand */}
+        <div className="text-center space-y-2">
+            <Link href="/" className="inline-flex items-center gap-2 group">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white font-black text-xl shadow-xl shadow-blue-500/20 group-hover:scale-110 transition-transform">A</div>
+                <span className="text-2xl font-black text-white tracking-tighter">AIM</span>
+            </Link>
+            <h1 className="text-3xl font-black text-white tracking-tight mt-6">Welcome Back</h1>
+            <p className="text-muted-foreground font-medium">Access your anonymous intelligence node</p>
         </div>
 
-        {/* Card */}
-        <div className="card" style={{ padding: '1.5rem' }}>
-          {error && (
-            <div role="alert" style={{ marginBottom: '1rem', background: 'rgba(220,61,34,0.1)', border: '1px solid rgba(220,61,34,0.25)', color: '#f2704a', borderRadius: '7px', padding: '0.6rem 0.875rem', fontSize: '0.8rem', display: 'flex', gap: '0.5rem' }}>
-              <span>⚠️</span><span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div>
-              <label htmlFor="username" style={{ display: 'block', fontSize: '0.775rem', fontWeight: 600, color: '#8a7359', marginBottom: '0.4rem' }}>Username</label>
-              <input
-                id="username" name="username" type="text" required
-                value={username}
-                onChange={e => { setUsername(e.target.value); clearError(); }}
-                placeholder="your_anon_handle"
-                autoComplete="username"
-                aria-invalid={!!error}
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" style={{ display: 'block', fontSize: '0.775rem', fontWeight: 600, color: '#8a7359', marginBottom: '0.4rem' }}>Password</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  id="password" name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  required value={password}
-                  onChange={e => { setPassword(e.target.value); clearError(); }}
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  style={{ width: '100%', paddingRight: '2.5rem' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(p => !p)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  style={{ position: 'absolute', right: '0.6rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#8a7359', padding: '0.2rem' }}
-                >
-                  <span aria-hidden="true">{showPassword ? '🙈' : '👁️'}</span>
-                </button>
+        <Card className="glass border-white/5 shadow-2xl shadow-black/50 overflow-hidden">
+          <CardHeader className="space-y-1 p-8 pb-4">
+            <CardTitle className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">Authentication</CardTitle>
+          </CardHeader>
+          <CardContent className="p-8 pt-4 space-y-6">
+            {error && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3 text-red-500 text-xs font-bold animate-in slide-in-from-top-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
               </div>
-            </div>
+            )}
 
-            <button
-              type="submit"
-              id="login-submit-btn"
-              disabled={isLoading || !username || !password}
-              className="btn btn-primary"
-              style={{ width: '100%', justifyContent: 'center', marginTop: '0.25rem', opacity: (isLoading || !username || !password) ? 0.5 : 1 }}
-            >
-              {isLoading ? (
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
-                  Signing in…
-                </span>
-              ) : 'Sign In →'}
-            </button>
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Codename</label>
+                <div className="relative group">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
+                    <Input 
+                        id="username"
+                        placeholder="your_anon_handle"
+                        value={username}
+                        onChange={e => { setUsername(e.target.value); clearError(); }}
+                        className="h-12 pl-12 bg-white/5 border-white/10 rounded-xl focus:border-blue-500/50 text-white font-bold"
+                    />
+                </div>
+              </div>
 
-          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(75,52,34,0.4)', textAlign: 'center' }}>
-            <p style={{ fontSize: '0.775rem', color: '#8a7359' }}>
-              No account?{' '}
-              <Link href="/register" style={{ color: '#f79a32', fontWeight: 600 }}>Create one anonymously</Link>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Access Phrase</label>
+                <div className="relative group">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
+                    <Input 
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={e => { setPassword(e.target.value); clearError(); }}
+                        className="h-12 pl-12 pr-12 bg-white/5 border-white/10 rounded-xl focus:border-blue-500/50 text-white font-bold"
+                    />
+                    <button 
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
+                    >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                </div>
+              </div>
+
+              <Button 
+                type="submit"
+                disabled={isLoading || !username || !password}
+                className="w-full h-14 rounded-2xl bg-blue-500 hover:bg-blue-600 font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-500/20 transition-all mt-4"
+              >
+                {isLoading ? (
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Authorizing...
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        Resume Session <ArrowRight className="w-4 h-4" />
+                    </div>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="p-8 pt-0 flex flex-col gap-6">
+            <Separator className="bg-white/5" />
+            <p className="text-xs text-muted-foreground font-medium text-center">
+                New to the network? <Link href="/register" className="text-blue-500 font-black hover:underline underline-offset-4">Initialize Identity</Link>
             </p>
-          </div>
-        </div>
+          </CardFooter>
+        </Card>
 
-        <p style={{ textAlign: 'center', fontSize: '0.725rem', color: '#5c4228', marginTop: '1rem' }}>
-          🔐 Your identity is never revealed on this platform
-        </p>
+        <div className="flex items-center justify-center gap-3 text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Zero-Knowledge Protocol Active
+        </div>
       </div>
     </main>
   );

@@ -40,6 +40,11 @@ INSTALLED_APPS = [
     'chat',
     'bounties',
     'verification',
+    'escrow',
+    'ratings',
+    'manager_hiring',
+    'fraud_detection',
+    'task_engine',
 ]
 
 MIDDLEWARE = [
@@ -272,5 +277,34 @@ LOGGING = {
             'level': 'DEBUG' if DEBUG else 'WARNING',
             'propagate': True,
         },
+    },
+}
+
+# ── ML Microservice ──────────────────────────────────────────────────────
+import os
+ML_SERVICE_URL = os.environ.get('ML_SERVICE_URL', 'http://localhost:8100')
+ML_SERVICE_TIMEOUT = float(os.environ.get('ML_SERVICE_TIMEOUT', '30'))
+
+# ── Celery Beat Schedule ─────────────────────────────────────────────────
+CELERY_BEAT_SCHEDULE = {
+    'process-escrow-releases': {
+        'task': 'escrow.process_scheduled_releases',
+        'schedule': 300.0,  # Every 5 minutes
+    },
+    'daily-trust-snapshot': {
+        'task': 'ratings.take_daily_snapshot',
+        'schedule': 86400.0,  # Daily
+    },
+    'recalculate-trust-scores': {
+        'task': 'ratings.recalculate_all_trust',
+        'schedule': 3600.0,  # Hourly
+    },
+    'recalculate-manager-rankings': {
+        'task': 'task_engine.recalculate_rankings',
+        'schedule': 1800.0,  # Every 30 minutes
+    },
+    'expire-overdue-tasks': {
+        'task': 'task_engine.expire_overdue_tasks',
+        'schedule': 600.0,  # Every 10 minutes
     },
 }

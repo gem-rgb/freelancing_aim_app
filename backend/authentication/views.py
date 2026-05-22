@@ -529,6 +529,7 @@ def admin_platform_stats(request):
     total_users     = User.objects.count()
     buyers          = User.objects.filter(user_type='buyer').count()
     sellers         = User.objects.filter(user_type='seller').count()
+    managers        = User.objects.filter(user_type='manager').count()
     suspended       = User.objects.filter(is_suspended=True).count()
     total_listings  = Listing.objects.count()
     active_listings = Listing.objects.filter(status='active').count()
@@ -544,7 +545,7 @@ def admin_platform_stats(request):
     )['total'] or Decimal('0')
     platform_revenue = float(revenue_sum) * 0.15
     return Response({
-        'users': {'total': total_users, 'buyers': buyers, 'sellers': sellers, 'suspended': suspended},
+        'users': {'total': total_users, 'buyers': buyers, 'sellers': sellers, 'managers': managers, 'suspended': suspended},
         'listings': {'total': total_listings, 'active': active_listings, 'flagged': flagged_listings},
         'transactions': {'total': total_txns, 'escrow': escrow_txns, 'released': released_txns, 'disputed': disputed_txns},
         'disputes': {'open': open_disputes},

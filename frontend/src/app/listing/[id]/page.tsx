@@ -5,6 +5,30 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiService } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { 
+  ShieldCheck, 
+  Lock, 
+  Clock, 
+  Star, 
+  ShoppingBag, 
+  MessageSquare, 
+  ChevronLeft, 
+  Eye, 
+  TrendingUp, 
+  Zap,
+  CheckCircle2,
+  AlertCircle,
+  CreditCard,
+  Phone,
+  ArrowRight
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface Listing {
   id: string;
@@ -25,59 +49,22 @@ interface Listing {
 
 function StarRating({ score }: { score: number }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-      {[1, 2, 3, 4, 5].map(i => (
-        <svg key={i} style={{ width: '14px', height: '14px', color: i <= Math.round(score) ? '#f79a32' : '#3c2818' }} fill="currentColor" viewBox="0 0 20 20">
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-        </svg>
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star 
+          key={i} 
+          className={cn(
+            "w-3.5 h-3.5",
+            i <= Math.round(score) ? "fill-blue-500 text-blue-500" : "text-muted-foreground/30"
+          )} 
+        />
       ))}
-      <span style={{ color: '#8a7359', fontSize: '0.8rem', marginLeft: '0.25rem' }}>{score.toFixed(1)}</span>
-    </span>
-  );
-}
-
-function MessageSellerButton({ sellerUsername }: { sellerUsername: string }) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
-
-  const openChat = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const userRes = await apiService.getChatUserByUsername(sellerUsername);
-      const { id: participantId } = userRes.data;
-      await apiService.createChatRoom({ participant_id: participantId, room_type: 'direct' });
-      router.push(`/chat?with=${sellerUsername}`);
-    } catch (e: any) {
-      setError(e.response?.data?.error || 'Could not open chat.');
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{ marginTop: '0.6rem' }}>
-      <button
-        id="message-seller-btn"
-        onClick={openChat}
-        disabled={loading}
-        style={{
-          width: '100%', padding: '0.65rem', borderRadius: '10px', fontWeight: 600,
-          fontSize: '0.875rem', cursor: 'pointer', border: '1px solid rgba(57,173,181,0.35)',
-          background: 'rgba(57,173,181,0.08)', color: '#39adb5',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-          opacity: loading ? 0.6 : 1, transition: 'all 0.15s ease',
-        }}
-      >
-        {loading ? <><span className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} /> Opening chat…</> : '💬 Message Seller'}
-      </button>
-      {error && <p style={{ fontSize: '0.72rem', color: '#f2704a', marginTop: '0.3rem', textAlign: 'center' }}>{error}</p>}
+      <span className="text-xs font-black text-muted-foreground ml-1">{score.toFixed(1)}</span>
     </div>
   );
 }
 
-
-function PurchaseModal({ listing, onClose }: { listing: Listing; onClose: () => void }) {
+function PurchaseModal({ listing, open, onOpenChange }: { listing: Listing; open: boolean; onOpenChange: (open: boolean) => void }) {
   const { user } = useAuth();
   type Step = 'method' | 'mpesa_phone' | 'processing' | 'done_paystack' | 'done_mpesa' | 'error';
   const [step, setStep]     = useState<Step>('method');
@@ -116,159 +103,138 @@ function PurchaseModal({ listing, onClose }: { listing: Listing; onClose: () => 
     }
   };
 
-  const modalBg: React.CSSProperties = {
-    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)',
-    backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center',
-    justifyContent: 'center', zIndex: 50, padding: '1rem',
-  };
-  const card: React.CSSProperties = {
-    background: '#1a1208', border: '1px solid #3c2818', borderRadius: '16px',
-    padding: '1.5rem', width: '100%', maxWidth: '420px',
-  };
-  const methodBtn = (active: boolean): React.CSSProperties => ({
-    flex: 1, padding: '0.75rem', borderRadius: '10px', cursor: 'pointer',
-    border: active ? '2px solid #f79a32' : '1px solid #3c2818',
-    background: active ? 'rgba(247,154,50,0.08)' : '#221a0f',
-    color: active ? '#f79a32' : '#8a7359', fontWeight: 700,
-    fontSize: '0.875rem', transition: 'all 0.2s',
-  });
-
   return (
-    <div style={modalBg} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={card}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#d3af86' }}>Secure Purchase</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8a7359', fontSize: '1.25rem' }}>✕</button>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="glass border-white/10 sm:max-w-[420px] p-0 overflow-hidden">
+        <div className="p-6 space-y-6">
+            <DialogHeader>
+            <DialogTitle className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                <ShieldCheck className="w-6 h-6 text-blue-500" />
+                Secure Purchase
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground font-bold uppercase tracking-widest text-[10px]">
+                Escrow Protected Transaction
+            </DialogDescription>
+            </DialogHeader>
+
+            {/* Price Summary */}
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-3">
+                <div className="flex justify-between text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                    <span>Base Asset</span>
+                    <span className="text-white">₦{Number(listing.price).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                    <span>Protocol Fee (15%)</span>
+                    <span className="text-white">₦{fee.toLocaleString()}</span>
+                </div>
+                <Separator className="bg-white/10" />
+                <div className="flex justify-between items-center">
+                    <span className="text-xs font-black text-blue-500 uppercase tracking-widest">Total Payable</span>
+                    <span className="text-2xl font-black text-white tracking-tighter">₦{total.toLocaleString()}</span>
+                </div>
+            </div>
+
+            {step === 'method' && (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-3">
+                        <Button 
+                            variant="outline" 
+                            className={cn(
+                                "h-24 flex flex-col gap-2 rounded-2xl transition-all",
+                                method === 'paystack' ? "bg-blue-500/10 border-blue-500 text-blue-500 shadow-lg shadow-blue-500/10" : "border-white/10 text-muted-foreground hover:bg-white/5"
+                            )}
+                            onClick={() => setMethod('paystack')}
+                        >
+                            <CreditCard className="w-6 h-6" />
+                            <span className="font-black uppercase text-[10px] tracking-widest">Paystack</span>
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            className={cn(
+                                "h-24 flex flex-col gap-2 rounded-2xl transition-all",
+                                method === 'mpesa' ? "bg-green-500/10 border-green-500 text-green-500 shadow-lg shadow-green-500/10" : "border-white/10 text-muted-foreground hover:bg-white/5"
+                            )}
+                            onClick={() => setMethod('mpesa')}
+                        >
+                            <Phone className="w-6 h-6" />
+                            <span className="font-black uppercase text-[10px] tracking-widest">M-Pesa</span>
+                        </Button>
+                    </div>
+
+                    <Button 
+                        className="w-full h-14 rounded-2xl bg-blue-500 hover:bg-blue-600 font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-500/20"
+                        onClick={() => method === 'mpesa' ? setStep('mpesa_phone') : initiatePaystack()}
+                    >
+                        {method === 'mpesa' ? 'Enter Phone Details' : 'Initialize Paystack Session'}
+                    </Button>
+                </div>
+            )}
+
+            {step === 'mpesa_phone' && (
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Safaricom Number</label>
+                        <Input 
+                            placeholder="e.g. 0712345678" 
+                            value={phone}
+                            onChange={e => setPhone(e.target.value)}
+                            className="h-12 bg-white/5 border-white/10 rounded-xl focus:border-green-500/50 font-bold"
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setStep('method')}>Back</Button>
+                        <Button className="rounded-xl bg-green-600 hover:bg-green-700 font-black" onClick={initiateMpesa}>Send STK Push</Button>
+                    </div>
+                </div>
+            )}
+
+            {step === 'processing' && (
+                <div className="py-12 flex flex-col items-center gap-4 text-center">
+                    <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <p className="font-bold text-white tracking-tight">Generating Secure Transaction Hash...</p>
+                </div>
+            )}
+
+            {step === 'done_paystack' && (
+                <div className="space-y-4 py-4">
+                    <div className="w-16 h-16 bg-green-500/10 rounded-2xl flex items-center justify-center mx-auto border border-green-500/20">
+                        <Zap className="w-8 h-8 text-green-500" />
+                    </div>
+                    <div className="text-center space-y-2">
+                        <h3 className="font-black text-white text-lg">Transaction Linked</h3>
+                        <p className="text-xs text-muted-foreground font-medium px-8">Paystack authorization ready. Return here after completion to unlock the asset.</p>
+                    </div>
+                    <Button className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 font-black uppercase text-xs tracking-widest" asChild>
+                        <a href={payUrl} target="_blank" rel="noopener noreferrer">Proceed to External Paystack <ArrowRight className="w-4 h-4 ml-2" /></a>
+                    </Button>
+                </div>
+            )}
+
+            {step === 'done_mpesa' && (
+                <div className="space-y-4 py-4">
+                    <div className="w-16 h-16 bg-green-500/10 rounded-2xl flex items-center justify-center mx-auto border border-green-500/20">
+                        <Phone className="w-8 h-8 text-green-500" />
+                    </div>
+                    <div className="text-center space-y-2">
+                        <h3 className="font-black text-white text-lg">STK Push Injected</h3>
+                        <p className="text-xs text-muted-foreground font-medium">{mpesaMsg}</p>
+                    </div>
+                    <Button className="w-full h-14 rounded-2xl bg-white/5 border border-white/10 text-white font-black uppercase text-xs tracking-widest" onClick={() => onOpenChange(false)}>Close - Monitor via Dashboard</Button>
+                </div>
+            )}
+
+            {step === 'error' && (
+                <div className="py-8 text-center space-y-4">
+                    <div className="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto border border-red-500/20">
+                        <AlertCircle className="w-6 h-6 text-red-500" />
+                    </div>
+                    <p className="text-sm text-red-400 font-bold px-6">{err}</p>
+                    <Button variant="ghost" className="text-blue-500 font-black text-xs uppercase tracking-widest" onClick={() => setStep('method')}>Back to Selection</Button>
+                </div>
+            )}
         </div>
-
-        {/* Summary strip */}
-        <div style={{ background: '#221a0f', borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1.25rem' }}>
-          <p style={{ fontSize: '0.75rem', color: '#8a7359', marginBottom: '0.25rem' }}>Purchasing</p>
-          <p style={{ fontWeight: 700, color: '#d3af86', marginBottom: '0.5rem', fontSize: '0.9rem' }}>{listing.title}</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.775rem', color: '#8a7359' }}>
-            <span>Base price</span><span>₦{Number(listing.price).toLocaleString()}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.775rem', color: '#8a7359' }}>
-            <span>Platform fee (15%)</span><span>₦{fee.toLocaleString()}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', fontWeight: 800, color: '#f79a32', marginTop: '0.4rem', borderTop: '1px solid #3c2818', paddingTop: '0.4rem' }}>
-            <span>Total</span><span>₦{total.toLocaleString()}</span>
-          </div>
-        </div>
-
-        {/* ── Method select ── */}
-        {step === 'method' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <p style={{ fontSize: '0.75rem', color: '#8a7359', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Choose payment method
-            </p>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button style={methodBtn(method === 'paystack')} onClick={() => setMethod('paystack')}>
-                💳 Paystack<br /><span style={{ fontSize: '0.7rem', fontWeight: 400 }}>Card · Bank · USSD</span>
-              </button>
-              <button style={methodBtn(method === 'mpesa')} onClick={() => setMethod('mpesa')}>
-                📱 M-Pesa<br /><span style={{ fontSize: '0.7rem', fontWeight: 400 }}>Safaricom STK Push</span>
-              </button>
-            </div>
-
-            <div style={{ background: 'rgba(57,173,181,0.07)', border: '1px solid rgba(57,173,181,0.18)', borderRadius: '8px', padding: '0.65rem 0.875rem', fontSize: '0.775rem', color: '#39adb5' }}>
-              🔐 Funds held in escrow. Content delivered encrypted after payment. 72-hr dispute window.
-            </div>
-
-            <button
-              id="proceed-payment-btn"
-              onClick={() => method === 'mpesa' ? setStep('mpesa_phone') : initiatePaystack()}
-              style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: 'linear-gradient(135deg,#f79a32,#dc3d22)', color: '#fff', fontWeight: 700, fontSize: '0.9rem', border: 'none', cursor: 'pointer' }}
-            >
-              {method === 'mpesa' ? 'Enter M-Pesa number →' : 'Proceed to Paystack →'}
-            </button>
-          </div>
-        )}
-
-        {/* ── M-Pesa phone entry ── */}
-        {step === 'mpesa_phone' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <p style={{ fontSize: '0.75rem', color: '#8a7359', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              M-Pesa Phone Number
-            </p>
-            <p style={{ fontSize: '0.8rem', color: '#c0a472' }}>
-              Enter your Safaricom number. You&apos;ll receive a payment prompt on your phone.
-            </p>
-            <input
-              id="mpesa-phone-input"
-              type="tel"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="e.g. 0712345678 or 254712345678"
-              style={{ width: '100%', padding: '0.65rem 0.875rem', borderRadius: '8px', background: '#221a0f', border: '1px solid #4b3422', color: '#d3af86', fontSize: '0.9rem' }}
-            />
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => setStep('method')} style={{ flex: 1, padding: '0.65rem', borderRadius: '8px', background: '#3c2818', border: '1px solid #4b3422', color: '#c0a472', cursor: 'pointer', fontSize: '0.85rem' }}>
-                ← Back
-              </button>
-              <button
-                id="mpesa-pay-btn"
-                onClick={initiateMpesa}
-                disabled={!phone.trim()}
-                style={{ flex: 2, padding: '0.65rem', borderRadius: '8px', background: 'linear-gradient(135deg,#00c853,#00875a)', color: '#fff', fontWeight: 700, border: 'none', cursor: phone.trim() ? 'pointer' : 'default', opacity: phone.trim() ? 1 : 0.5, fontSize: '0.875rem' }}
-              >
-                📱 Pay via M-Pesa
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Processing ── */}
-        {step === 'processing' && (
-          <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-            <span className="spinner" style={{ width: '36px', height: '36px', borderWidth: '3px', display: 'inline-block', marginBottom: '1rem' }} />
-            <p style={{ color: '#8a7359', fontSize: '0.875rem' }}>
-              {method === 'mpesa' ? 'Sending M-Pesa prompt…' : 'Initializing payment…'}
-            </p>
-          </div>
-        )}
-
-        {/* ── Paystack done ── */}
-        {step === 'done_paystack' && (
-          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(136,155,74,0.15)', border: '1px solid rgba(136,155,74,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', fontSize: '1.5rem' }}>✓</div>
-            <p style={{ fontWeight: 700, color: '#d3af86' }}>Payment link ready!</p>
-            <p style={{ fontSize: '0.8rem', color: '#8a7359' }}>Complete payment on Paystack. Return here after — your content will be unlocked.</p>
-            <a href={payUrl} target="_blank" rel="noopener noreferrer"
-              style={{ display: 'block', width: '100%', padding: '0.75rem', borderRadius: '10px', background: '#0ba4db', color: '#fff', fontWeight: 700, textDecoration: 'none', textAlign: 'center' }}>
-              Pay on Paystack →
-            </a>
-          </div>
-        )}
-
-        {/* ── M-Pesa done ── */}
-        {step === 'done_mpesa' && (
-          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ fontSize: '2.5rem' }}>📱</div>
-            <p style={{ fontWeight: 700, color: '#d3af86' }}>Check your phone!</p>
-            <p style={{ fontSize: '0.825rem', color: '#8a7359' }}>{mpesaMsg}</p>
-            <div style={{ background: 'rgba(0,200,83,0.07)', border: '1px solid rgba(0,200,83,0.2)', borderRadius: '8px', padding: '0.75rem', fontSize: '0.775rem', color: '#00c853' }}>
-              Enter your M-Pesa PIN when prompted. Transaction will be held in escrow automatically.
-            </div>
-            <button onClick={onClose} style={{ padding: '0.65rem', borderRadius: '10px', background: '#3c2818', border: '1px solid #4b3422', color: '#c0a472', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem' }}>
-              Done — monitor in Dashboard
-            </button>
-          </div>
-        )}
-
-        {/* ── Error ── */}
-        {step === 'error' && (
-          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ fontSize: '2rem' }}>⚠️</div>
-            <p style={{ color: '#f2704a', fontSize: '0.875rem' }}>{err}</p>
-            <button onClick={() => setStep('method')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f79a32', fontWeight: 600, fontSize: '0.875rem' }}>
-              ← Try again
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -292,174 +258,168 @@ export default function ListingDetailPage() {
         .then(res => { setListing(res.data); setLoading(false); })
         .catch(() => router.push('/listings'));
     }
-  }, [id, isLoading, isAuthenticated]);
+  }, [id, isLoading, isAuthenticated, router]);
 
   if (isLoading || (loading && isAuthenticated)) return (
-    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <span className="spinner" style={{ width: '20px', height: '20px', borderWidth: '2px' }} />
-    </main>
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <p className="text-muted-foreground font-black uppercase tracking-widest text-[10px]">Retrieving Asset Ledger...</p>
+    </div>
   );
 
-  if (!isAuthenticated) return null;
-  if (!listing) return null;
+  if (!isAuthenticated || !listing) return null;
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
   return (
-    <main style={{ minHeight: '100vh', padding: '2rem 0 4rem' }}>
-      {showModal && <PurchaseModal listing={listing} onClose={() => setShowModal(false)} />}
-      <div className="container" style={{ maxWidth: '1050px' }}>
+    <main className="min-h-screen pb-24 pt-8 animate-fade-in">
+      <PurchaseModal listing={listing} open={showModal} onOpenChange={setShowModal} />
+      
+      <div className="max-w-7xl mx-auto px-6 space-y-8">
+        {/* Navigation */}
+        <Button variant="ghost" className="text-muted-foreground hover:text-white font-bold" asChild>
+          <Link href="/listings">
+            <ChevronLeft className="w-4 h-4 mr-2" /> Back to Marketplace
+          </Link>
+        </Button>
 
-        {/* Breadcrumb */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#5c4228', marginBottom: '1.75rem' }}>
-          <Link href="/listings" style={{ color: '#8a7359', textDecoration: 'none' }}>← Marketplace</Link>
-          <span style={{ color: '#3c2818' }}>/</span>
-          <span style={{ color: '#c0a472', fontWeight: 500 }}>{listing.title}</span>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '2rem', alignItems: 'flex-start' }}>
-
-          {/* ── Main Column ────────────────────────────────────── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
-            {/* Header Card */}
-            <div className="card" style={{ padding: '1.75rem' }}>
-              {/* Category + Date */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <span style={{ fontSize: '0.7rem', color: '#39adb5', background: 'rgba(57,173,181,0.1)', padding: '0.2rem 0.6rem', borderRadius: '999px', fontWeight: 600, border: '1px solid rgba(57,173,181,0.2)' }}>
-                  {listing.category_name || 'General'}
-                </span>
-                <span style={{ fontSize: '0.7rem', color: '#5c4228' }}>·</span>
-                <span style={{ fontSize: '0.7rem', color: '#5c4228' }}>{fmtDate(listing.created_at)}</span>
-              </div>
-
-              {/* Title */}
-              <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#d3af86', margin: '0 0 0.85rem', lineHeight: 1.3 }}>
-                {listing.title}
-              </h1>
-
-              {/* Seller info bar */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', padding: '0.6rem 0.8rem', background: 'rgba(34,26,15,0.8)', borderRadius: '10px', border: '1px solid rgba(75,52,34,0.3)' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg,#f79a32,#dc3d22)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
-                  {listing.seller_username[0]?.toUpperCase()}
+        <div className="grid lg:grid-cols-[1fr,360px] gap-8 items-start">
+          {/* Main Content */}
+          <div className="space-y-8">
+            <Card className="glass border-white/5 overflow-hidden">
+              <CardHeader className="p-8 pb-4">
+                <div className="flex items-center gap-3 mb-6">
+                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 font-black uppercase text-[10px] tracking-widest px-4 py-1.5 rounded-full">
+                    {listing.category_name || 'General Sector'}
+                  </Badge>
+                  <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest flex items-center gap-2">
+                    <Clock className="w-3 h-3" /> Deployed {fmtDate(listing.created_at)}
+                  </span>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <Link href={`/seller/${listing.seller_username}`} style={{ fontSize: '0.85rem', fontWeight: 600, color: '#d3af86', textDecoration: 'none' }}>
-                    {listing.seller_username}
-                  </Link>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.1rem' }}>
+                <h1 className="text-4xl font-black text-white tracking-tighter leading-tight mb-4">
+                  {listing.title}
+                </h1>
+                
+                <div className="flex flex-wrap gap-2">
+                  {listing.tags_list.map(t => (
+                    <span key={t} className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest">#{t}</span>
+                  ))}
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-8 pt-4 space-y-12">
+                <div className="flex items-center gap-6 p-4 rounded-[2rem] bg-white/5 border border-white/5">
+                  <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl shadow-blue-500/10">
+                    {listing.seller_username[0]?.toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-1">Provider Alias</p>
+                    <Link href={`/seller/${listing.seller_username}`} className="text-lg font-black text-white hover:text-blue-500 transition-colors">
+                      @{listing.seller_username}
+                    </Link>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 text-right">Reputation Score</p>
                     <StarRating score={listing.seller_reputation} />
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#8a7359' }}>
-                  <span>👁 {listing.view_count} views</span>
-                  <span>🛒 {listing.purchase_count} sold</span>
-                </div>
-              </div>
 
-              {/* Tags */}
-              {listing.tags_list?.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '1.25rem' }}>
-                  {listing.tags_list.map(t => (
-                    <span key={t} style={{ fontSize: '0.68rem', background: 'rgba(75,52,34,0.4)', color: '#8a7359', padding: '0.15rem 0.5rem', borderRadius: '999px', border: '1px solid rgba(75,52,34,0.3)' }}>
-                      #{t}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Description */}
-              <div style={{ borderTop: '1px solid rgba(75,52,34,0.3)', paddingTop: '1rem' }}>
-                <h3 style={{ fontSize: '0.78rem', fontWeight: 700, color: '#5c4228', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem' }}>Description</h3>
-                <p style={{ color: '#c0a472', lineHeight: 1.75, fontSize: '0.875rem', whiteSpace: 'pre-wrap' }}>{listing.description}</p>
-              </div>
-            </div>
-
-            {/* Preview Card */}
-            <div className="card" style={{ padding: '1.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <svg style={{ width: '16px', height: '16px', color: '#39adb5' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#d3af86', margin: 0 }}>Preview</h3>
-              </div>
-              <p style={{ color: '#c0a472', lineHeight: 1.75, fontSize: '0.875rem', whiteSpace: 'pre-wrap' }}>{listing.preview_content}</p>
-
-              <div style={{ marginTop: '1.25rem', padding: '0.75rem 1rem', background: 'rgba(57,173,181,0.06)', borderRadius: '10px', border: '1px solid rgba(57,173,181,0.15)', textAlign: 'center' }}>
-                <p style={{ fontSize: '0.75rem', color: '#39adb5', margin: 0 }}>🔒 Full content is encrypted and only revealed after purchase</p>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Sidebar ────────────────────────────────────────── */}
-          <div style={{ position: 'sticky', top: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-            {/* Price Card */}
-            <div className="card" style={{ padding: '1.5rem' }}>
-              <p style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 0.15rem' }}>
-                <span className="text-gradient">₦{Number(listing.price).toLocaleString()}</span>
-              </p>
-              <p style={{ fontSize: '0.72rem', color: '#5c4228', marginBottom: '1.25rem' }}>+ 15% platform fee · Escrow protected</p>
-
-              {/* Role-aware purchase button */}
-              {user?.user_type === 'buyer' ? (
-                <button
-                  id="purchase-btn"
-                  onClick={() => setShowModal(true)}
-                  className="btn btn-primary btn-lg"
-                  style={{ width: '100%', justifyContent: 'center', fontSize: '0.95rem', padding: '0.8rem' }}
-                >
-                  🛒 Purchase Now
-                </button>
-              ) : (
-                <div style={{ padding: '0.75rem', borderRadius: '10px', background: 'rgba(136,155,74,0.08)', border: '1px solid rgba(136,155,74,0.2)', textAlign: 'center' }}>
-                  <p style={{ fontSize: '0.775rem', color: '#a0b85e', margin: 0 }}>
-                    🛠️ You are viewing as a <strong>Seller</strong>.<br />
-                    <span style={{ color: '#8a7359' }}>Only buyer accounts can purchase listings.</span>
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">Asset Intelligence Narrative</h3>
+                  <p className="text-muted-foreground leading-relaxed font-medium text-lg whitespace-pre-wrap">
+                    {listing.description}
                   </p>
                 </div>
-              )}
 
-              {/* Message Seller */}
-              {listing.seller_username !== user?.username && (
-                <MessageSellerButton sellerUsername={listing.seller_username} />
-              )}
-            </div>
+                <Separator className="bg-white/5" />
 
-            {/* Trust Signals Card */}
-            <div className="card" style={{ padding: '1.25rem' }}>
-              <h4 style={{ fontSize: '0.75rem', fontWeight: 700, color: '#5c4228', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.85rem' }}>Security Guarantees</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-blue-500" />
+                    <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Intelligence Preview</h3>
+                  </div>
+                  <div className="p-6 rounded-3xl bg-white/5 border border-white/5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5">
+                      <Lock className="w-12 h-12 text-white" />
+                    </div>
+                    <p className="text-muted-foreground font-medium italic leading-relaxed">
+                        &quot;{listing.preview_content}&quot;
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex gap-3 items-center">
+                    <ShieldCheck className="w-5 h-5 text-blue-500" />
+                    <p className="text-[10px] font-black text-blue-500/80 uppercase tracking-widest">The full payload is end-to-end encrypted. Unlocked only after successful network escrow.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-8 sticky top-24">
+            <Card className="glass border-white/5 overflow-hidden group">
+              <div className="p-8 space-y-6">
+                <div>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2 text-center">Asset Acquisition Value</p>
+                  <h2 className="text-5xl font-black text-center tracking-tighter text-white">
+                    <span className="text-gradient">₦{Number(listing.price).toLocaleString()}</span>
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 py-2 border-y border-white/5">
+                   <div className="text-center py-2">
+                      <p className="text-2xl font-black text-white">{listing.purchase_count}</p>
+                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Holders</p>
+                   </div>
+                   <div className="text-center py-2 border-l border-white/5">
+                      <p className="text-2xl font-black text-white">{listing.view_count}</p>
+                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Inquiries</p>
+                   </div>
+                </div>
+
+                {user?.user_type === 'buyer' ? (
+                  <Button 
+                    className="w-full h-16 rounded-2xl bg-blue-500 hover:bg-blue-600 font-black uppercase text-xs tracking-[0.1em] shadow-2xl shadow-blue-500/20"
+                    onClick={() => setShowModal(true)}
+                  >
+                    🛒 Initialize Purchase
+                  </Button>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Restricted Action</p>
+                    <p className="text-xs text-white/60 font-bold mt-1">Sellers cannot purchase assets.</p>
+                  </div>
+                )}
+
+                {listing.seller_username !== user?.username && (
+                   <Button variant="outline" className="w-full h-14 rounded-2xl border-white/10 hover:bg-white/5 font-black uppercase text-xs tracking-widest" asChild>
+                      <Link href={`/chat?with=${listing.seller_username}`}>
+                        <MessageSquare className="w-4 h-4 mr-2" /> Message Provider
+                      </Link>
+                   </Button>
+                )}
+              </div>
+            </Card>
+
+            <Card className="glass border-white/5">
+              <CardHeader>
+                <CardTitle className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">Platform Guarantees</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 {[
-                  { icon: '🛡️', label: 'Escrow-protected payment', color: '#a0b85e' },
-                  { icon: '🔐', label: 'End-to-end encrypted', color: '#39adb5' },
-                  { icon: '⏰', label: '72h dispute window', color: '#f79a32' },
-                  { icon: '⚖️', label: 'Admin-arbitrated disputes', color: '#8ab1b0' },
-                ].map(item => (
-                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem', color: '#c0a472' }}>
-                    <span style={{ fontSize: '0.95rem', width: '20px', textAlign: 'center' }}>{item.icon}</span>
-                    <span>{item.label}</span>
+                  { icon: ShieldCheck, label: 'Protocol Escrow', color: 'text-green-500', bg: 'bg-green-500/10' },
+                  { icon: Lock, label: 'E2EE Payload', color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                  { icon: Clock, label: '72h Dispute Layer', color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className={cn("p-2 rounded-lg", item.bg)}>
+                        <item.icon className={cn("w-4 h-4", item.color)} />
+                    </div>
+                    <span className="text-[10px] font-black text-white/80 uppercase tracking-widest">{item.label}</span>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="card" style={{ padding: '1.25rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                {[
-                  { label: 'Views', value: listing.view_count, icon: '👁' },
-                  { label: 'Sold', value: listing.purchase_count, icon: '🛒' },
-                ].map(s => (
-                  <div key={s.label} style={{ textAlign: 'center', padding: '0.5rem', background: 'rgba(34,26,15,0.6)', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '1rem', marginBottom: '0.15rem' }}>{s.icon}</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f79a32' }}>{s.value}</div>
-                    <div style={{ fontSize: '0.68rem', color: '#5c4228' }}>{s.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

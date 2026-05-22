@@ -5,6 +5,26 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { apiService } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { 
+  Star, 
+  ShieldCheck, 
+  ShoppingBag, 
+  MessageSquare, 
+  ChevronLeft, 
+  User, 
+  Calendar, 
+  CheckCircle2, 
+  Zap, 
+  TrendingUp, 
+  Award,
+  Package,
+  ArrowRight
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface SellerProfile {
   username: string;
@@ -20,28 +40,31 @@ interface SellerProfile {
   reviews: { reviewer: string; rating: number; comment: string; created_at: string }[];
 }
 
-function StarRating({ rating, size = '1rem' }: { rating: number; size?: string }) {
+function StarRating({ rating, className }: { rating: number; className?: string }) {
   return (
-    <span>
-      {[1,2,3,4,5].map(i => (
-        <span key={i} style={{ color: i <= Math.round(rating) ? '#f79a32' : '#3c2818', fontSize: size }}>★</span>
+    <div className={cn("flex items-center gap-1", className)}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star 
+          key={i} 
+          className={cn(
+            "w-3.5 h-3.5",
+            i <= Math.round(rating) ? "fill-blue-500 text-blue-500" : "text-muted-foreground/30"
+          )} 
+        />
       ))}
-    </span>
+    </div>
   );
 }
 
-function Avatar({ username, avatarUrl, size = 80 }: { username: string; avatarUrl?: string; size?: number }) {
+function Avatar({ username, avatarUrl, size = 100 }: { username: string; avatarUrl?: string; size?: number }) {
   if (avatarUrl) {
-    return <img src={avatarUrl} alt={username} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(247,154,50,0.3)' }} />;
+    return <img src={avatarUrl} alt={username} style={{ width: size, height: size }} className="rounded-[2rem] object-cover border-4 border-white/5 shadow-2xl shadow-blue-500/10" />;
   }
   return (
-    <div style={{
-      width: size, height: size, borderRadius: '50%',
-      background: 'linear-gradient(135deg,#f79a32,#dc3d22)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.4, fontWeight: 800, color: '#fff',
-      border: '3px solid rgba(247,154,50,0.3)', flexShrink: 0,
-    }}>
+    <div 
+        style={{ width: size, height: size }} 
+        className="rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white font-black text-4xl shadow-2xl shadow-blue-500/20 border-4 border-white/5"
+    >
       {username[0]?.toUpperCase()}
     </div>
   );
@@ -72,20 +95,25 @@ export default function SellerProfilePage() {
   }, [username]);
 
   if (loading) return (
-    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="spinner" style={{ width: '36px', height: '36px' }} />
-    </main>
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <p className="text-muted-foreground font-black uppercase tracking-widest text-[10px]">Scanning Provider Metadata...</p>
+    </div>
   );
 
   if (notFound || !profile) return (
-    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🕵️</div>
-        <h1 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Seller not found</h1>
-        <p style={{ color: '#8a7359', marginBottom: '1rem', fontSize: '0.875rem' }}>
-          This seller may not exist or their profile is private.
-        </p>
-        <Link href="/listings" className="btn btn-primary">Browse Marketplace →</Link>
+    <main className="min-h-screen flex items-center justify-center p-6 bg-background">
+      <div className="max-w-md w-full text-center space-y-8 animate-fade-in">
+        <div className="w-24 h-24 bg-white/5 rounded-[2rem] flex items-center justify-center mx-auto border border-white/10">
+          <User className="w-10 h-10 text-muted-foreground/30" />
+        </div>
+        <div className="space-y-4">
+          <h1 className="text-4xl font-black text-white tracking-tight">Provider <span className="text-gradient">Not Found</span></h1>
+          <p className="text-muted-foreground leading-relaxed font-medium">The requested node is either offline or does not exist in the marketplace directory.</p>
+        </div>
+        <Button className="h-14 px-8 rounded-2xl bg-blue-500 hover:bg-blue-600 font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-500/20" asChild>
+          <Link href="/listings">Return to Marketplace</Link>
+        </Button>
       </div>
     </main>
   );
@@ -93,143 +121,171 @@ export default function SellerProfilePage() {
   const memberSince = new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
-    <main style={{ minHeight: '100vh', paddingBottom: '4rem' }}>
-      <div className="container" style={{ maxWidth: '820px', paddingTop: '2rem' }}>
-
+    <main className="min-h-screen pb-24 pt-8 animate-fade-in">
+      <div className="max-w-5xl mx-auto px-6 space-y-8">
         {/* Breadcrumb */}
-        <nav style={{ fontSize: '0.775rem', color: '#8a7359', marginBottom: '1.5rem' }}>
-          <Link href="/listings" style={{ color: '#8a7359' }}>Marketplace</Link>
-          <span style={{ margin: '0 0.4rem' }}>›</span>
-          <span style={{ color: '#d3af86' }}>Seller: {profile.username}</span>
-        </nav>
+        <Button variant="ghost" className="text-muted-foreground hover:text-white font-bold" asChild>
+          <Link href="/listings">
+            <ChevronLeft className="w-4 h-4 mr-2" /> Back to Marketplace
+          </Link>
+        </Button>
 
-        {/* ── Profile Hero ── */}
-        <div className="card" style={{ padding: '2rem', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-            <Avatar username={profile.username} avatarUrl={profile.avatar_url} size={88} />
+        {/* Hero Card */}
+        <Card className="glass border-white/5 overflow-hidden relative group">
+          <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
+            <Award className="w-48 h-48 text-white" />
+          </div>
+          
+          <CardContent className="p-8 md:p-12 space-y-12">
+            <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
+              <Avatar username={profile.username} avatarUrl={profile.avatar_url} size={120} />
+              
+              <div className="flex-1 space-y-4">
+                <div className="flex flex-wrap items-center gap-3">
+                    <h1 className="text-4xl font-black text-white tracking-tighter">@{profile.username}</h1>
+                    {profile.is_verified && (
+                        <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 font-black uppercase text-[10px] tracking-widest px-4 py-1.5 rounded-full">
+                            <ShieldCheck className="w-3.5 h-3.5 mr-2" /> Verified Provider
+                        </Badge>
+                    )}
+                </div>
 
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.3rem' }}>
-                <h1 style={{ fontSize: '1.375rem' }}>{profile.username}</h1>
-                {profile.is_verified && (
-                  <span style={{ fontSize: '0.7rem', padding: '0.18rem 0.55rem', borderRadius: '999px', background: 'rgba(57,173,181,0.12)', color: '#39adb5', fontWeight: 600 }}>
-                    ✓ Verified
-                  </span>
+                {profile.avg_rating !== null && (
+                    <div className="flex items-center gap-4">
+                        <StarRating rating={profile.avg_rating} />
+                        <span className="text-lg font-black text-blue-500 tracking-tighter">{profile.avg_rating}</span>
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">({profile.reviews.length} Network Reviews)</span>
+                    </div>
                 )}
+
+                {profile.bio && (
+                    <p className="text-muted-foreground font-medium leading-relaxed max-w-2xl">{profile.bio}</p>
+                )}
+
+                <div className="flex items-center gap-2 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                    <Calendar className="w-3.5 h-3.5" /> Node Initialized {memberSince}
+                </div>
               </div>
 
-              {profile.avg_rating !== null && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                  <StarRating rating={profile.avg_rating} />
-                  <span style={{ fontSize: '0.8rem', color: '#f79a32', fontWeight: 600 }}>{profile.avg_rating}</span>
-                  <span style={{ fontSize: '0.75rem', color: '#5c4228' }}>({profile.reviews.length} review{profile.reviews.length !== 1 ? 's' : ''})</span>
-                </div>
+              {isAuthenticated && (
+                <Button className="h-14 px-8 rounded-2xl bg-blue-500 hover:bg-blue-600 font-black uppercase text-xs tracking-widest shadow-2xl shadow-blue-500/20" asChild>
+                    <Link href={`/chat?with=${profile.username}`}>
+                        <MessageSquare className="w-4 h-4 mr-3" /> Transmit Message
+                    </Link>
+                </Button>
               )}
-
-              {profile.bio && (
-                <p style={{ fontSize: '0.85rem', color: '#c0a472', lineHeight: 1.6, marginBottom: '0.5rem' }}>{profile.bio}</p>
-              )}
-
-              <p style={{ fontSize: '0.725rem', color: '#5c4228' }}>Member since {memberSince}</p>
             </div>
 
-            {/* CTA */}
-            {isAuthenticated && (
-              <Link href={`/chat?with=${profile.username}`} className="btn btn-primary btn-sm" style={{ flexShrink: 0 }}>
-                💬 Message Seller
-              </Link>
-            )}
-          </div>
-
-          {/* Stats row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid #3c2818' }}>
-            {[
-              { label: 'Active Listings', value: profile.total_listings, icon: '📦', color: '#f79a32' },
-              { label: 'Total Sales',     value: profile.total_sales,    icon: '✅', color: '#a0b85e' },
-              { label: 'Avg Rating',      value: profile.avg_rating !== null ? `${profile.avg_rating} ⭐` : 'No ratings yet', icon: '🏆', color: '#39adb5' },
-            ].map(s => (
-              <div key={s.label} style={{ textAlign: 'center', padding: '0.75rem', background: 'rgba(60,40,24,0.5)', borderRadius: '8px' }}>
-                <div style={{ fontSize: '1.25rem', marginBottom: '0.2rem' }}>{s.icon}</div>
-                <p style={{ fontWeight: 700, fontSize: '1.1rem', color: s.color, marginBottom: '0.1rem' }}>{s.value}</p>
-                <p style={{ fontSize: '0.7rem', color: '#5c4228' }}>{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Tabs ── */}
-        <div role="tablist" style={{ display: 'flex', gap: '0.25rem', background: '#3c2818', borderRadius: '9px', padding: '0.25rem', width: 'fit-content', marginBottom: '1.25rem' }}>
-          {[
-            { id: 'listings' as const, label: `📦 Listings (${profile.listings.length})` },
-            { id: 'reviews'  as const, label: `⭐ Reviews (${profile.reviews.length})` },
-          ].map(t => (
-            <button key={t.id} onClick={() => setActiveTab(t.id)} role="tab" aria-selected={activeTab === t.id}
-              style={{ padding: '0.3rem 0.9rem', borderRadius: '6px', fontSize: '0.775rem', fontWeight: activeTab === t.id ? 600 : 500, cursor: 'pointer', border: 'none', background: activeTab === t.id ? 'rgba(247,154,50,0.15)' : 'transparent', color: activeTab === t.id ? '#f79a32' : '#8a7359', transition: 'all 0.15s ease' }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Listings grid ── */}
-        {activeTab === 'listings' && (
-          profile.listings.length === 0
-            ? <div className="card" style={{ textAlign: 'center', padding: '2.5rem' }}>
-                <p style={{ color: '#8a7359' }}>This seller has no active listings.</p>
-              </div>
-            : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-                {profile.listings.map((l: any) => (
-                  <Link key={l.id} href={`/listing/${l.id}`} style={{ textDecoration: 'none' }}>
-                    <article className="card" style={{ padding: '1.25rem', cursor: 'pointer', transition: 'border-color 0.2s', height: '100%' }}>
-                      {/* Preview media thumbnail */}
-                      {l.preview_media?.length > 0 && l.preview_media[0].media_type === 'image' && (
-                        <img src={l.preview_media[0].file_url} alt="" style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '7px', marginBottom: '0.75rem' }} />
-                      )}
-                      <h3 style={{ fontSize: '0.875rem', marginBottom: '0.35rem', color: '#d3af86' }}>{l.title}</h3>
-                      {l.category_name && <span style={{ fontSize: '0.68rem', padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(247,154,50,0.1)', color: '#f79a32' }}>{l.category_name}</span>}
-                      <p style={{ fontSize: '0.75rem', color: '#8a7359', marginTop: '0.5rem', lineHeight: 1.5 }}>
-                        {l.preview_content?.slice(0, 80)}{(l.preview_content?.length ?? 0) > 80 ? '…' : ''}
-                      </p>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem' }}>
-                        <span style={{ fontSize: '1rem', fontWeight: 700, color: '#f79a32' }}>₦{Number(l.price).toLocaleString()}</span>
-                        <span style={{ fontSize: '0.68rem', color: '#5c4228' }}>{l.purchase_count} sold</span>
-                      </div>
-                    </article>
-                  </Link>
-                ))}
-              </div>
-            )
-        )}
-
-        {/* ── Reviews ── */}
-        {activeTab === 'reviews' && (
-          profile.reviews.length === 0
-            ? <div className="card" style={{ textAlign: 'center', padding: '2.5rem' }}>
-                <p style={{ color: '#8a7359' }}>No reviews yet. Be the first to leave one after a purchase!</p>
-              </div>
-            : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {profile.reviews.map((r, i) => (
-                  <div key={i} className="card" style={{ padding: '1rem 1.25rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg,#39adb5,#2c8b91)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700, color: '#fff' }}>
-                          {r.reviewer[0]?.toUpperCase()}
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+                {[
+                    { label: 'Active Assets', value: profile.total_listings, icon: Package, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                    { label: 'Successful Sales', value: profile.total_sales, icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-500/10' },
+                    { label: 'Network Reputation', value: profile.reputation_score, icon: Award, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                    { label: 'Trust Rating', value: profile.avg_rating !== null ? `${profile.avg_rating}/5` : 'N/A', icon: Star, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+                ].map((s, i) => (
+                    <div key={i} className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2 group/stat hover:bg-white/[0.07] transition-all">
+                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border border-transparent group-hover/stat:border-current transition-all", s.bg, s.color)}>
+                            <s.icon className="w-5 h-5" />
                         </div>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#c0a472' }}>{r.reviewer}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <StarRating rating={r.rating} size="0.9rem" />
-                        <span style={{ fontSize: '0.72rem', color: '#5c4228' }}>{new Date(r.created_at).toLocaleDateString()}</span>
-                      </div>
+                        <div>
+                            <p className="text-lg font-black text-white tracking-tighter">{s.value}</p>
+                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{s.label}</p>
+                        </div>
                     </div>
-                    {r.comment && <p style={{ fontSize: '0.8rem', color: '#8a7359', lineHeight: 1.6 }}>{r.comment}</p>}
-                  </div>
                 ))}
-              </div>
-            )
-        )}
+            </div>
+          </CardContent>
+        </Card>
 
+        {/* Tabs Section */}
+        <div className="space-y-6 pt-4">
+            <div className="flex items-center gap-2 p-1 bg-white/5 rounded-2xl w-fit">
+                {[
+                    { id: 'listings' as const, label: `Intelligence Assets (${profile.listings.length})`, icon: Package },
+                    { id: 'reviews'  as const, label: `Verification Logs (${profile.reviews.length})`, icon: ShieldCheck },
+                ].map((t) => (
+                    <Button
+                        key={t.id}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setActiveTab(t.id)}
+                        className={cn(
+                            "rounded-xl px-6 py-5 font-bold uppercase text-[10px] tracking-widest transition-all gap-2",
+                            activeTab === t.id ? "bg-white/10 text-white shadow-xl" : "text-muted-foreground hover:text-white"
+                        )}
+                    >
+                        <t.icon className="w-3.5 h-3.5" />
+                        {t.label}
+                    </Button>
+                ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className="animate-in fade-in duration-500 slide-in-from-bottom-4">
+                {activeTab === 'listings' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {profile.listings.length === 0 ? (
+                            <div className="col-span-full py-20 text-center opacity-30 italic font-medium">No active assets deployed by this provider.</div>
+                        ) : (
+                            profile.listings.map((l: any) => (
+                                <Link key={l.id} href={`/listing/${l.id}`}>
+                                    <Card className="glass border-white/5 overflow-hidden h-full group hover:border-blue-500/20 transition-all hover-glow flex flex-col">
+                                        <CardContent className="p-6 flex flex-col h-full">
+                                            <div className="flex-1 space-y-4">
+                                                <Badge variant="secondary" className="bg-white/5 text-[9px] font-black uppercase text-white/60 tracking-widest rounded-md">
+                                                    {l.category_name || 'General'}
+                                                </Badge>
+                                                <h3 className="text-lg font-black text-white leading-tight line-clamp-2 group-hover:text-blue-500 transition-colors">
+                                                    {l.title}
+                                                </h3>
+                                                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                                                    {l.preview_content}
+                                                </p>
+                                            </div>
+                                            <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
+                                                <p className="text-xl font-black text-white tracking-tighter">₦{Number(l.price).toLocaleString()}</p>
+                                                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-500 transition-all">
+                                                    <ArrowRight className="w-5 h-5 text-blue-500 group-hover:text-white" />
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            ))
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'reviews' && (
+                    <div className="space-y-4 max-w-3xl mx-auto">
+                        {profile.reviews.length === 0 ? (
+                            <div className="py-20 text-center opacity-30 italic font-medium">No verification logs available for this node.</div>
+                        ) : (
+                            profile.reviews.map((r, i) => (
+                                <Card key={i} className="glass border-white/5 group hover:bg-white/[0.03] transition-all">
+                                    <CardContent className="p-6">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-xs">
+                                                    {r.reviewer[0]?.toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-white tracking-tight">@{r.reviewer}</p>
+                                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{new Date(r.created_at).toLocaleDateString()}</p>
+                                                </div>
+                                            </div>
+                                            <StarRating rating={r.rating} />
+                                        </div>
+                                        <p className="text-sm text-muted-foreground font-medium leading-relaxed pl-14">{r.comment}</p>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
       </div>
     </main>
   );

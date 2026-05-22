@@ -6,10 +6,36 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { EncryptionService } from '@/utils/encryption';
 import { apiService } from '@/utils/api';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { 
+  ShieldCheck, 
+  Lock, 
+  Key, 
+  Download, 
+  ArrowRight, 
+  ArrowLeft, 
+  User, 
+  Mail, 
+  Zap, 
+  CheckCircle2, 
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Dices,
+  Cpu,
+  RefreshCcw
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { getPostLoginDashboardPath } from '@/lib/rbac';
 
 function RegisterPageInner() {
   const searchParams    = useSearchParams();
-  const defaultRole     = (searchParams.get('role') === 'seller' ? 'seller' : 'buyer') as 'buyer' | 'seller';
+  const roleParam       = searchParams.get('role');
+  const defaultRole     = (roleParam === 'seller' ? 'seller' : roleParam === 'manager' ? 'manager' : 'buyer') as 'buyer' | 'seller' | 'manager';
 
   const [step, setStep]                         = useState<1 | 2 | 3>(1);
   const [formData, setFormData]                 = useState({
@@ -53,7 +79,7 @@ function RegisterPageInner() {
   const handleGenerateKeys = useCallback(async () => {
     setGeneratingKeys(true);
     try {
-      await new Promise(r => setTimeout(r, 50));
+      await new Promise(r => setTimeout(r, 800)); // Visual pause for "heavy" operation
       const keys = EncryptionService.generateKeyPair();
       setFormData(prev => ({ ...prev, public_key: keys.publicKey, encrypted_private_key: keys.privateKey }));
       setKeysGenerated(true);
@@ -81,7 +107,6 @@ function RegisterPageInner() {
 
   useEffect(() => () => { if (cooldownRef.current) clearTimeout(cooldownRef.current); }, []);
 
-  /* ── Register and decide whether OTP step is needed ── */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirm_password) return;
@@ -92,21 +117,18 @@ function RegisterPageInner() {
         setStep(3);
         startCooldown(60);
       } else {
-        const dest = formData.user_type === 'seller' ? '/dashboard' : '/listings';
-        router.push(dest);
+        router.push(getPostLoginDashboardPath({ user_type: formData.user_type, is_staff: false }));
       }
     } catch { }
     finally { setIsLoading(false); }
   };
 
-  /* ── OTP verification ── */
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setOtpLoading(true); setOtpError('');
     try {
       await apiService.verifyOTP(otp);
-      const dest = formData.user_type === 'seller' ? '/dashboard' : '/listings';
-      router.push(dest);
+      router.push(getPostLoginDashboardPath({ user_type: formData.user_type, is_staff: false }));
     } catch (err: any) {
       setOtpError(err?.response?.data?.error || 'Invalid or expired code. Try again.');
     } finally { setOtpLoading(false); }
@@ -124,277 +146,283 @@ function RegisterPageInner() {
 
   const passwordsMatch = formData.confirm_password === '' || formData.password === formData.confirm_password;
   const canSubmit      = formData.username && formData.password && formData.confirm_password && passwordsMatch;
-  const inputStyle     = { width: '100%' } as React.CSSProperties;
-
-  const stepLabels = ['Identity', 'Encryption Keys', 'Verify Email'];
 
   return (
-    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.25rem', position: 'relative', overflow: 'hidden' }}>
-      {/* Ambient glows */}
-      <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '320px', height: '320px', borderRadius: '50%', background: 'rgba(220,61,34,0.05)', filter: 'blur(90px)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: '-80px', left: '-80px', width: '280px', height: '280px', borderRadius: '50%', background: 'rgba(247,154,50,0.05)', filter: 'blur(80px)', pointerEvents: 'none' }} />
+    <main className="min-h-screen flex items-center justify-center p-6 pt-32 relative overflow-hidden bg-background">
+      {/* Background elements */}
+      <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
+        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-blue-500 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-blue-600 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
 
-      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '380px' }}>
-
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', marginBottom: '1rem' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '7px', background: 'linear-gradient(135deg,#f79a32,#dc3d22)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.875rem' }}>A</div>
-            <span style={{ color: '#d3af86', fontWeight: 700, fontSize: '0.9375rem' }}>AIM</span>
-          </Link>
-          <h1 style={{ fontSize: '1.375rem', marginBottom: '0.2rem' }}>Create account</h1>
-          <p style={{ fontSize: '0.8rem', color: '#8a7359' }}>No real name required. Ever.</p>
+      <div className="w-full max-w-[420px] space-y-8 relative z-10 animate-fade-in">
+        {/* Brand */}
+        <div className="text-center space-y-2">
+            <Link href="/" className="inline-flex items-center gap-2 group">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white font-black text-xl shadow-xl shadow-blue-500/20 group-hover:scale-110 transition-transform">A</div>
+                <span className="text-2xl font-black text-white tracking-tighter">AIM</span>
+            </Link>
+            <h1 className="text-3xl font-black text-white tracking-tight mt-6">Protocol Initialize</h1>
+            <p className="text-muted-foreground font-medium">Generate your distributed marketplace identity</p>
         </div>
 
-        {/* Step progress */}
-        <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.25rem' }}>
-          {[1, 2, 3].map(s => (
-            <div key={s} style={{ flex: 1, height: '3px', borderRadius: '999px', background: step >= s ? 'linear-gradient(90deg,#f79a32,#dc3d22)' : '#3c2818', transition: 'all 0.3s ease' }} />
-          ))}
+        {/* Step Indicator */}
+        <div className="flex gap-2 p-1 bg-white/5 rounded-full">
+            {[1, 2, 3].map(s => (
+                <div key={s} className={cn(
+                    "h-1.5 flex-1 rounded-full transition-all duration-500",
+                    s <= step ? "bg-gradient-to-r from-blue-600 to-cyan-500 shadow-lg shadow-blue-500/20" : "bg-white/10"
+                )} />
+            ))}
         </div>
 
-        {/* Card */}
-        <div className="card" style={{ padding: '1.5rem' }}>
-          {(error) && (
-            <div role="alert" style={{ marginBottom: '1rem', background: 'rgba(220,61,34,0.1)', border: '1px solid rgba(220,61,34,0.25)', color: '#f2704a', borderRadius: '7px', padding: '0.6rem 0.875rem', fontSize: '0.8rem', display: 'flex', gap: '0.5rem' }}>
-              <span>⚠️</span><span>{error}</span>
-            </div>
-          )}
-
-          {/* ── Step 1: Identity ─────────────────────────────────── */}
-          {step === 1 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <p style={{ fontSize: '0.7rem', color: '#8a7359', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Step 1 — Identity
-              </p>
-
-              {/* Username */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.775rem', fontWeight: 600, color: '#8a7359', marginBottom: '0.4rem' }}>Username</label>
-                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                  <input id="username" name="username" type="text" required value={formData.username} onChange={handleChange} placeholder="your_anon_handle" style={{ flex: 1 }} />
-                  <button
-                    type="button" onClick={handleGenerateUsername} disabled={generatingUsername}
-                    style={{ padding: '0.45rem 0.75rem', borderRadius: '7px', background: '#3c2818', border: '1px solid #4b3422', color: '#c0a472', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', opacity: generatingUsername ? 0.6 : 1 }}
-                  >
-                    {generatingUsername ? '…' : '🎲 Gen'}
-                  </button>
-                </div>
+        <Card className="glass border-white/5 shadow-2xl shadow-black/50 overflow-hidden">
+          <CardContent className="p-8 space-y-6">
+            {error && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3 text-red-500 text-xs font-bold">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
               </div>
+            )}
 
-              {/* User Type */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.775rem', fontWeight: 600, color: '#8a7359', marginBottom: '0.4rem' }}>Account Type</label>
-                <select
-                  name="user_type" value={formData.user_type} onChange={handleChange}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '7px', background: '#3c2818', border: '1px solid #4b3422', color: '#d3af86', fontSize: '0.8rem' }}
-                >
-                  <option value="buyer">🛒 Buyer — Purchase digital content</option>
-                  <option value="seller">💼 Seller — Create and sell listings</option>
-                </select>
-              </div>
+            {/* Step 1: Identity */}
+            {step === 1 && (
+                <div className="space-y-6 animate-in slide-in-from-right duration-500">
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Identity Codename</label>
+                            <div className="flex gap-2">
+                                <div className="relative flex-1 group">
+                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
+                                    <Input 
+                                        name="username"
+                                        placeholder="your_anon_handle"
+                                        value={formData.username}
+                                        onChange={handleChange}
+                                        className="h-12 pl-12 bg-white/5 border-white/10 rounded-xl focus:border-blue-500/50 text-white font-bold"
+                                    />
+                                </div>
+                                <Button 
+                                    variant="outline" 
+                                    className="h-12 w-12 rounded-xl border-white/10 hover:bg-white/5 p-0"
+                                    onClick={handleGenerateUsername}
+                                    disabled={generatingUsername}
+                                >
+                                    <Dices className={cn("w-5 h-5 text-blue-500", generatingUsername && "animate-spin")} />
+                                </Button>
+                            </div>
+                        </div>
 
-              {/* Password */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.775rem', fontWeight: 600, color: '#8a7359', marginBottom: '0.4rem' }}>Password</label>
-                <div style={{ position: 'relative' }}>
-                  <input id="password" name="password" type={showPassword ? 'text' : 'password'} required value={formData.password} onChange={handleChange} placeholder="••••••••" style={{ ...inputStyle, paddingRight: '2.5rem' }} />
-                  <button type="button" onClick={() => setShowPassword(p => !p)} style={{ position: 'absolute', right: '0.6rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#8a7359' }} tabIndex={-1}>
-                    {showPassword ? '🙈' : '👁️'}
-                  </button>
-                </div>
-              </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Protocol Role</label>
+                            <select 
+                                name="user_type"
+                                value={formData.user_type}
+                                onChange={handleChange}
+                                className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-white font-bold appearance-none focus:outline-none focus:border-blue-500/50"
+                            >
+                                <option value="buyer" className="bg-slate-900">🛒 Buyer — Acquire Assets</option>
+                                <option value="seller" className="bg-slate-900">💼 Seller — Deploy Assets</option>
+                                <option value="manager" className="bg-slate-900">🛡️ Manager — Verification ops</option>
+                            </select>
+                        </div>
 
-              {/* Confirm */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.775rem', fontWeight: 600, color: '#8a7359', marginBottom: '0.4rem' }}>Confirm Password</label>
-                <input id="confirm_password" name="confirm_password" type="password" required value={formData.confirm_password} onChange={handleChange} placeholder="••••••••"
-                  style={{ ...inputStyle, borderColor: !passwordsMatch ? 'rgba(220,61,34,0.6)' : undefined }} />
-                {!passwordsMatch && <p style={{ fontSize: '0.725rem', color: '#dc3d22', marginTop: '0.3rem' }}>Passwords don't match</p>}
-              </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Security Phrase</label>
+                            <div className="relative group">
+                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
+                                <Input 
+                                    name="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    placeholder="••••••••"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    className="h-12 pl-12 pr-12 bg-white/5 border-white/10 rounded-xl focus:border-blue-500/50 text-white font-bold"
+                                />
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white"
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </div>
 
-              {/* Optional Email */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.775rem', fontWeight: 600, color: '#8a7359', marginBottom: '0.4rem' }}>
-                  Email <span style={{ fontWeight: 400, color: '#5c4228' }}>(optional — for account recovery)</span>
-                </label>
-                <input
-                  id="email" name="email" type="email" value={formData.email} onChange={handleChange}
-                  placeholder="anonymous@protonmail.com"
-                  style={inputStyle}
-                />
-                {formData.email && (
-                  <p style={{ fontSize: '0.7rem', color: '#39adb5', marginTop: '0.3rem' }}>
-                    📧 A verification code will be sent to this address
-                  </p>
-                )}
-              </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Confirm Phrase</label>
+                            <Input 
+                                name="confirm_password"
+                                type="password"
+                                placeholder="••••••••"
+                                value={formData.confirm_password}
+                                onChange={handleChange}
+                                className={cn(
+                                    "h-12 bg-white/5 border-white/10 rounded-xl focus:border-blue-500/50 text-white font-bold",
+                                    !passwordsMatch && "border-red-500/50 focus:border-red-500"
+                                )}
+                            />
+                        </div>
 
-              <button
-                type="button" onClick={() => setStep(2)}
-                disabled={!formData.username || !formData.password || !passwordsMatch || !formData.confirm_password}
-                className="btn btn-primary"
-                style={{ width: '100%', justifyContent: 'center', opacity: (!formData.username || !formData.password || !passwordsMatch || !formData.confirm_password) ? 0.5 : 1 }}
-              >
-                Next: Encryption Keys →
-              </button>
-            </div>
-          )}
-
-          {/* ── Step 2: Keys ─────────────────────────────────────── */}
-          {step === 2 && (
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <p style={{ fontSize: '0.7rem', color: '#8a7359', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Step 2 — Encryption Keys
-              </p>
-
-              <div style={{ background: 'rgba(57,173,181,0.08)', border: '1px solid rgba(57,173,181,0.2)', borderRadius: '7px', padding: '0.65rem 0.875rem', fontSize: '0.775rem', color: '#39adb5' }}>
-                🔐 Your RSA-2048 keypair is generated <strong>locally in your browser</strong>. The private key never leaves your device.
-              </div>
-
-              {!keysGenerated ? (
-                <button
-                  type="button" onClick={handleGenerateKeys} disabled={generatingKeys} id="generate-keys-btn"
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '7px', background: '#3c2818', border: '1px solid #4b3422', color: '#d3af86', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: generatingKeys ? 0.7 : 1 }}
-                >
-                  {generatingKeys
-                    ? <><span className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />Generating RSA-2048 keypair…</>
-                    : '🗝️ Generate Encryption Keys'}
-                </button>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(136,155,74,0.1)', border: '1px solid rgba(136,155,74,0.25)', borderRadius: '7px', padding: '0.5rem 0.75rem' }}>
-                    <svg style={{ width: '14px', height: '14px', color: '#889b4a', flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span style={{ fontSize: '0.775rem', color: '#a0b85e' }}>RSA-2048 keypair generated in browser</span>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.7rem', color: '#8a7359', marginBottom: '0.3rem' }}>Public Key (shared with buyers)</label>
-                    <textarea rows={3} value={formData.public_key} readOnly
-                      style={{ width: '100%', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.6rem', resize: 'none', color: '#8a7359' }} />
-                  </div>
-
-                  {!privateKeyDownloaded ? (
-                    <button type="button" onClick={downloadPrivateKey}
-                      style={{ width: '100%', padding: '0.55rem', borderRadius: '7px', background: 'rgba(247,154,50,0.1)', border: '1px solid rgba(247,154,50,0.25)', color: '#f79a32', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-                      ⬇️ Download Private Key (.pem)
-                    </button>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(247,154,50,0.08)', border: '1px solid rgba(247,154,50,0.2)', borderRadius: '7px', padding: '0.5rem 0.75rem' }}>
-                      <span style={{ fontSize: '0.775rem', color: '#f79a32' }}>✅ Private key downloaded — store it safely!</span>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Recovery Node (Email)</label>
+                            <div className="relative group">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
+                                <Input 
+                                    name="email"
+                                    type="email"
+                                    placeholder="Optional — for recovery"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    className="h-12 pl-12 bg-white/5 border-white/10 rounded-xl focus:border-blue-500/50 text-white font-bold"
+                                />
+                            </div>
+                        </div>
                     </div>
-                  )}
+
+                    <Button 
+                        className="w-full h-14 rounded-2xl bg-blue-500 hover:bg-blue-600 font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-500/20"
+                        onClick={() => setStep(2)}
+                        disabled={!formData.username || !formData.password || !passwordsMatch || !formData.confirm_password}
+                    >
+                        Define Encryption Keys <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
                 </div>
-              )}
+            )}
 
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
-                <button type="button" onClick={() => setStep(1)}
-                  style={{ flex: 1, padding: '0.55rem', borderRadius: '7px', background: '#3c2818', border: '1px solid #4b3422', color: '#c0a472', fontSize: '0.8rem', cursor: 'pointer' }}>
-                  ← Back
-                </button>
-                <button type="submit" id="register-submit-btn" disabled={isLoading || !keysGenerated || !canSubmit}
-                  className="btn btn-primary"
-                  style={{ flex: 2, justifyContent: 'center', opacity: (isLoading || !keysGenerated || !canSubmit) ? 0.5 : 1 }}>
-                  {isLoading
-                    ? <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><span className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />Creating…</span>
-                    : formData.email ? '🚀 Create & Verify Email' : '🚀 Create Account'}
-                </button>
-              </div>
-            </form>
-          )}
+            {/* Step 2: Keys */}
+            {step === 2 && (
+                <div className="space-y-8 animate-in slide-in-from-right duration-500">
+                    <div className="p-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex gap-4 items-start">
+                        <ShieldCheck className="w-6 h-6 text-blue-500 flex-shrink-0 mt-1" />
+                        <div className="space-y-1">
+                            <p className="text-xs font-black text-blue-500 uppercase tracking-widest">Zero-Knowledge Cipher</p>
+                            <p className="text-[10px] text-blue-500/80 font-bold leading-relaxed uppercase">RSA-2048 keys are generated locally. The private key never leaves your device.</p>
+                        </div>
+                    </div>
 
-          {/* ── Step 3: OTP Verification ─────────────────────────── */}
-          {step === 3 && (
-            <form onSubmit={handleVerifyOTP} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <p style={{ fontSize: '0.7rem', color: '#8a7359', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Step 3 — Verify Email
-              </p>
+                    {!keysGenerated ? (
+                        <div className="space-y-6">
+                            <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mx-auto border border-white/10">
+                                <Cpu className={cn("w-10 h-10 text-muted-foreground/30", generatingKeys && "animate-spin text-blue-500")} />
+                            </div>
+                            <Button 
+                                className="w-full h-16 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black uppercase text-xs tracking-widest"
+                                onClick={handleGenerateKeys}
+                                disabled={generatingKeys}
+                            >
+                                {generatingKeys ? "Computing Prime Numbers..." : "Generate RSA Keypair"}
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            <div className="p-4 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center gap-3">
+                                <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">Asymmetric Cipher Ready</span>
+                            </div>
 
-              <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📬</div>
-                <p style={{ fontSize: '0.85rem', color: '#c0a472', marginBottom: '0.3rem' }}>
-                  Code sent to <strong>{formData.email}</strong>
-                </p>
-                <p style={{ fontSize: '0.775rem', color: '#8a7359' }}>
-                  Enter the 6-digit code below. Expires in 10 minutes.
-                </p>
-              </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Network Public Address</label>
+                                <textarea 
+                                    readOnly 
+                                    value={formData.public_key}
+                                    className="w-full h-24 bg-black/40 border border-white/10 rounded-xl p-4 text-[8px] font-mono text-muted-foreground resize-none focus:outline-none"
+                                />
+                            </div>
 
-              {otpError && (
-                <div style={{ background: 'rgba(220,61,34,0.1)', border: '1px solid rgba(220,61,34,0.25)', color: '#f2704a', borderRadius: '7px', padding: '0.6rem 0.875rem', fontSize: '0.8rem' }}>
-                  ⚠️ {otpError}
+                            <div className="space-y-4">
+                                {!privateKeyDownloaded ? (
+                                    <Button 
+                                        className="w-full h-16 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-black uppercase text-xs tracking-[0.1em] shadow-xl shadow-blue-500/20"
+                                        onClick={downloadPrivateKey}
+                                    >
+                                        <Download className="w-5 h-5 mr-3" /> Secure Download (.PEM)
+                                    </Button>
+                                ) : (
+                                    <div className="p-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-center">
+                                        <p className="text-xs font-black text-blue-500 uppercase tracking-widest mb-1">Key Captured Successfully</p>
+                                        <p className="text-[9px] text-blue-500/60 font-bold uppercase tracking-widest">Store it offline. It cannot be recovered.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex gap-3">
+                        <Button variant="ghost" className="rounded-xl font-bold flex-1" onClick={() => setStep(1)}>Back</Button>
+                        <Button 
+                            className="rounded-xl bg-blue-500 hover:bg-blue-600 font-black flex-[2]" 
+                            onClick={handleSubmit}
+                            disabled={isLoading || !keysGenerated || !privateKeyDownloaded}
+                        >
+                            {isLoading ? "Broadcasting..." : "Finalize Registration"}
+                        </Button>
+                    </div>
                 </div>
-              )}
+            )}
 
-              {/* OTP input */}
-              <input
-                id="otp-input"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                value={otp}
-                onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="• • • • • •"
-                style={{
-                  width: '100%',
-                  textAlign: 'center',
-                  fontSize: '1.75rem',
-                  fontWeight: 800,
-                  letterSpacing: '0.5em',
-                  fontFamily: 'JetBrains Mono, monospace',
-                  padding: '0.75rem',
-                }}
-                autoFocus
-              />
+            {/* Step 3: OTP */}
+            {step === 3 && (
+                <div className="space-y-8 animate-in slide-in-from-right duration-500">
+                    <div className="text-center space-y-4">
+                        <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto border border-blue-500/20">
+                            <Mail className="w-8 h-8 text-blue-500" />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="font-black text-white text-lg uppercase tracking-tight">Verify Node Connection</h3>
+                            <p className="text-xs text-muted-foreground font-medium px-4">
+                                A 6-digit verification sequence has been dispatched to <span className="text-white font-bold">{formData.email}</span>
+                            </p>
+                        </div>
+                    </div>
 
-              <button
-                type="submit"
-                id="otp-verify-btn"
-                disabled={otp.length !== 6 || otpLoading}
-                className="btn btn-primary"
-                style={{ width: '100%', justifyContent: 'center', opacity: (otp.length !== 6 || otpLoading) ? 0.5 : 1 }}
-              >
-                {otpLoading
-                  ? <><span className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} /> Verifying…</>
-                  : '✓ Verify & Enter'}
-              </button>
+                    <div className="space-y-6">
+                        <Input 
+                            value={otp}
+                            onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            placeholder="000000"
+                            className="h-20 text-center text-4xl font-black tracking-[0.5em] bg-white/5 border-white/10 rounded-2xl focus:border-blue-500/50 text-white"
+                        />
 
-              {/* Resend */}
-              <div style={{ textAlign: 'center' }}>
-                <button
-                  type="button"
-                  onClick={handleResendOTP}
-                  disabled={resendCooldown > 0}
-                  style={{ background: 'none', border: 'none', cursor: resendCooldown > 0 ? 'default' : 'pointer', color: resendCooldown > 0 ? '#5c4228' : '#f79a32', fontSize: '0.775rem', fontWeight: 600 }}
-                >
-                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
-                </button>
-              </div>
+                        <Button 
+                            className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-500/20"
+                            onClick={handleVerifyOTP}
+                            disabled={otp.length !== 6 || otpLoading}
+                        >
+                            {otpLoading ? "Verifying..." : "Validate Node"}
+                        </Button>
 
-              {/* Skip */}
-              <button
-                type="button"
-                onClick={() => router.push(formData.user_type === 'seller' ? '/dashboard' : '/listings')}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5c4228', fontSize: '0.75rem', textAlign: 'center' }}
-              >
-                Skip for now →
-              </button>
-            </form>
-          )}
-
-          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(75,52,34,0.4)', textAlign: 'center' }}>
-            <p style={{ fontSize: '0.775rem', color: '#8a7359' }}>
-              Already registered?{' '}
-              <Link href="/login" style={{ color: '#f79a32', fontWeight: 600 }}>Sign in</Link>
+                        <div className="text-center space-y-4">
+                            <button 
+                                className="text-[10px] font-black text-muted-foreground uppercase tracking-widest hover:text-white transition-colors flex items-center justify-center gap-2 mx-auto"
+                                onClick={handleResendOTP}
+                                disabled={resendCooldown > 0}
+                            >
+                                <RefreshCcw className={cn("w-3 h-3", resendCooldown > 0 && "opacity-20")} />
+                                {resendCooldown > 0 ? `Resend In ${resendCooldown}s` : "Resend Sequence"}
+                            </button>
+                            
+                            <button 
+                                className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest hover:text-white transition-colors block mx-auto"
+                                onClick={() => router.push(getPostLoginDashboardPath({ user_type: formData.user_type, is_staff: false }))}
+                            >
+                                Skip Verification (Limited Access)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+          </CardContent>
+          <CardFooter className="p-8 pt-0 flex flex-col gap-6">
+            <Separator className="bg-white/5" />
+            <p className="text-xs text-muted-foreground font-medium text-center">
+                Already registered? <Link href="/login" className="text-blue-500 font-black hover:underline underline-offset-4">Resume Session</Link>
             </p>
-          </div>
-        </div>
+          </CardFooter>
+        </Card>
 
-        <p style={{ textAlign: 'center', fontSize: '0.725rem', color: '#5c4228', marginTop: '1rem' }}>
-          🛡️ No email · No phone · No real name required
+        <p className="text-[10px] text-muted-foreground/30 font-black uppercase tracking-[0.2em] text-center">
+            AIM — Distributed Intelligence Network
         </p>
       </div>
     </main>
@@ -403,7 +431,7 @@ function RegisterPageInner() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div className="spinner" style={{ width: '28px', height: '28px' }} /></main>}>
+    <Suspense fallback={null}>
       <RegisterPageInner />
     </Suspense>
   );

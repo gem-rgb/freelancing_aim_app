@@ -13,7 +13,7 @@ Pillow==11.1.0
 djangorestframework-simplejwt==5.5.0
 django-cors-headers==4.6.0
 celery==5.5.0
-flower==3.0.9
+flower==2.0.1
 # ── Added for full feature set ─────────────────────────────────────────────
 django-filter>=23.0          # DjangoFilterBackend in listings/views.py
 requests>=2.31.0             # Paystack REST calls in transactions/paystack.py

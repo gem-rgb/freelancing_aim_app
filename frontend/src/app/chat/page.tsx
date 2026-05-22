@@ -6,6 +6,29 @@ import Link from 'next/link';
 import { apiService } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { EncryptionService } from '@/utils/encryption';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { 
+  MessageSquare, 
+  ShieldCheck, 
+  Lock, 
+  Key, 
+  Send, 
+  Search, 
+  User, 
+  Headset, 
+  Clock, 
+  CheckCircle2,
+  AlertCircle,
+  X,
+  MoreVertical,
+  Paperclip,
+  ArrowLeft
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 /* ── Types ─────────────────────────────────────────────────── */
 interface Message {
@@ -21,40 +44,7 @@ interface Room {
 
 type ChatTab = 'messages' | 'support';
 
-/* ── Small helpers ─────────────────────────────────────────── */
-function Avatar({ name, size = 36, gradient = 'linear-gradient(135deg,#f79a32,#dc3d22)' }: { name: string; size?: number; gradient?: string }) {
-  return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: gradient, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: size * 0.38, color: '#fff' }}>
-      {name?.[0]?.toUpperCase() ?? '?'}
-    </div>
-  );
-}
-
-function StatusDot({ connected }: { connected: boolean }) {
-  return <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: connected ? '#a0b85e' : '#5c4228', boxShadow: connected ? '0 0 6px rgba(160,184,94,0.6)' : 'none', flexShrink: 0 }} />;
-}
-
-/* ── Room item in sidebar ──────────────────────────────────── */
-function RoomItem({ room, isActive, onClick, currentUser }: { room: Room; isActive: boolean; onClick: () => void; currentUser: string }) {
-  const label   = room.type === 'support' ? '🛟 Support' : (room.other_user?.username ?? 'Unknown');
-  const gradient = room.type === 'support' ? 'linear-gradient(135deg,#39adb5,#2c7a80)' : isActive ? 'linear-gradient(135deg,#f79a32,#dc3d22)' : 'linear-gradient(135deg,#4b3422,#3c2818)';
-  return (
-    <button onClick={onClick} style={{ width: '100%', textAlign: 'left', padding: '0.75rem 1.125rem', borderBottom: '1px solid rgba(75,52,34,0.25)', background: isActive ? 'rgba(247,154,50,0.07)' : 'transparent', borderLeft: `3px solid ${isActive ? '#f79a32' : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.65rem', transition: 'all 0.12s ease' }}>
-      <Avatar name={room.type === 'support' ? 'S' : label} size={34} gradient={gradient} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.15rem' }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: isActive ? '#f79a32' : '#c0a472', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-          {room.unread_count > 0 && <span style={{ background: '#39adb5', color: '#fff', fontSize: '0.62rem', fontWeight: 700, padding: '0.1rem 0.42rem', borderRadius: '999px', flexShrink: 0 }}>{room.unread_count}</span>}
-        </div>
-        <p style={{ fontSize: '0.7rem', color: '#5c4228', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {room.last_message ? '🔒 Encrypted message' : 'No messages yet'}
-        </p>
-      </div>
-    </button>
-  );
-}
-
-/* ── Main chat page ─────────────────────────────────────────── */
+/* ── Chat Page Inner ─────────────────────────────────────────── */
 function ChatPageInner() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router       = useRouter();
@@ -80,13 +70,9 @@ function ChatPageInner() {
   const endRef   = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  /* ── Auth guard ── */
-  useEffect(() => { if (!authLoading && !isAuthenticated) router.replace('/login'); }, [authLoading, isAuthenticated]);
+  useEffect(() => { if (!authLoading && !isAuthenticated) router.replace('/login'); }, [authLoading, isAuthenticated, router]);
+  useEffect(() => { if (!authLoading && isAuthenticated && user?.is_staff) router.replace('/admin/dashboard'); }, [authLoading, isAuthenticated, user, router]);
 
-  /* ── Staff guard — admin messaging lives in /admin/dashboard ── */
-  useEffect(() => { if (!authLoading && isAuthenticated && user?.is_staff) router.replace('/admin/dashboard'); }, [authLoading, isAuthenticated, user]);
-
-  /* ── Load private key + rooms ── */
   useEffect(() => {
     if (!user) return;
     const pk = localStorage.getItem(`private_key_${user.id}`) || '';
@@ -99,19 +85,15 @@ function ChatPageInner() {
     }).catch(() => {});
   }, [user]);
 
-  /* ── Scroll ── */
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  /* ── Handle ?with=username query — open or create a DM ── */
   useEffect(() => {
     const withUser = searchParams?.get('with');
     if (!withUser || !user || creatingRoom) return;
 
-    // Already have room with this user?
     const existing = rooms.find(r => r.other_user?.username === withUser);
     if (existing) { selectRoom(existing); return; }
 
-    // Create it
     const createRoom = async () => {
       setCreatingRoom(true);
       setRoomError('');
@@ -129,10 +111,9 @@ function ChatPageInner() {
         setRoomError(e.response?.data?.error || `Could not open chat with ${withUser}.`);
       } finally { setCreatingRoom(false); }
     };
-    if (rooms.length > 0 || !creatingRoom) createRoom(); // only after rooms loaded
-  }, [searchParams, rooms, user]);
+    if (rooms.length > 0 || !creatingRoom) createRoom();
+  }, [searchParams, rooms, user, creatingRoom]);
 
-  /* ── WebSocket ── */
   const connectWS = useCallback((room: Room) => {
     ws?.close();
     setWsReady(false);
@@ -170,7 +151,6 @@ function ChatPageInner() {
       const res = await apiService.getMessages(room.id);
       const msgs: Message[] = res.data.results || res.data;
       setMessages(msgs);
-      // Mark unread
       msgs.forEach(m => {
         if (m.sender !== user?.username && m.sender_username !== user?.username) {
           apiService.markMessageRead(m.id).catch(() => {});
@@ -209,21 +189,16 @@ function ChatPageInner() {
 
   const sendMessage = () => {
     if (!input.trim() || !ws || !wsReady || !activeRoom) return;
-
     let encrypted = input;
-    // For support room encrypt with admin's key if available, otherwise send plain
     if (activeRoom.other_user?.public_key) {
       try { encrypted = EncryptionService.encryptRSA(input, activeRoom.other_user.public_key); }
       catch { /* fallback to plain */ }
     }
-
     ws.send(JSON.stringify({ type: 'message', encrypted_message: encrypted, message_type: 'text' }));
-
-    // Optimistic local message
     setMessages(prev => [...prev, {
       id: `tmp-${Date.now()}`,
       sender: user?.username ?? '',
-      encrypted_message: input, // show plain for sender
+      encrypted_message: input,
       message_type: 'text',
       timestamp: new Date().toISOString(),
     }]);
@@ -239,239 +214,243 @@ function ChatPageInner() {
     setDecrypted({});
   };
 
-  if (authLoading || !isAuthenticated) return (
-    <main style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="spinner" style={{ width: '28px', height: '28px' }} />
-    </main>
-  );
+  if (authLoading || !isAuthenticated) return null;
 
-  const displayRooms = tab === 'support' ? (supportRoom ? [supportRoom] : []) : rooms;
-  const otherName    = activeRoom?.type === 'support' ? 'AIM Support' : (activeRoom?.other_user?.username ?? '');
-  const avatarGrad   = activeRoom?.type === 'support' ? 'linear-gradient(135deg,#39adb5,#2c7a80)' : 'linear-gradient(135deg,#f79a32,#dc3d22)';
+  const otherName = activeRoom?.type === 'support' ? 'AIM Support' : (activeRoom?.other_user?.username ?? 'Terminal');
 
   return (
-    <main style={{ display: 'flex', height: 'calc(100vh - 50px)', overflow: 'hidden', background: 'rgba(26,18,10,0.97)' }}>
-
-      {/* ── Sidebar ── */}
-      <aside style={{ width: '270px', flexShrink: 0, borderRight: '1px solid rgba(75,52,34,0.5)', background: 'rgba(34,26,15,0.7)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-
-        {/* Tab switcher */}
-        <div style={{ display: 'flex', borderBottom: '1px solid rgba(75,52,34,0.4)', flexShrink: 0 }}>
-          {(['messages', 'support'] as ChatTab[]).map(t => (
-            <button key={t} onClick={() => { setTab(t); if (t === 'support') openSupportRoom(); }}
-              style={{ flex: 1, padding: '0.65rem', fontSize: '0.775rem', fontWeight: tab === t ? 700 : 500, color: tab === t ? '#f79a32' : '#5c4228', background: 'transparent', border: 'none', borderBottom: `2px solid ${tab === t ? '#f79a32' : 'transparent'}`, cursor: 'pointer', transition: 'all 0.15s' }}>
-              {t === 'messages' ? '💬 Messages' : '🛟 Help & Support'}
-            </button>
-          ))}
-        </div>
-
-        {/* Room list or support */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {tab === 'messages' && (
-            <>
-              {rooms.length === 0 && !creatingRoom ? (
-                <div style={{ padding: '2rem 1rem', textAlign: 'center' }}>
-                  <p style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>🤝</p>
-                  <p style={{ fontSize: '0.775rem', color: '#5c4228', lineHeight: 1.6 }}>
-                    No conversations yet.<br />
-                    Visit a <Link href="/listings" style={{ color: '#f79a32' }}>listing</Link> and click<br />
-                    <strong style={{ color: '#d3af86' }}>Message Seller</strong> to start.
-                  </p>
-                </div>
-              ) : creatingRoom ? (
-                <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <div className="spinner" style={{ width: '18px', height: '18px', margin: '0 auto 0.5rem' }} />
-                  <p style={{ fontSize: '0.75rem', color: '#5c4228' }}>Opening conversation…</p>
-                </div>
-              ) : (
-                rooms.map(r => <RoomItem key={r.id} room={r} isActive={activeRoom?.id === r.id} onClick={() => selectRoom(r)} currentUser={user?.username ?? ''} />)
-              )}
-              {roomError && <p style={{ fontSize: '0.72rem', color: '#f2704a', padding: '0.5rem 1rem' }}>⚠️ {roomError}</p>}
-            </>
-          )}
-
-          {tab === 'support' && (
-            loadingSupport ? (
-              <div style={{ padding: '2rem', textAlign: 'center' }}>
-                <div className="spinner" style={{ width: '18px', height: '18px', margin: '0 auto 0.5rem' }} />
-                <p style={{ fontSize: '0.75rem', color: '#5c4228' }}>Connecting to support…</p>
-              </div>
-            ) : supportRoom ? (
-              <RoomItem room={supportRoom} isActive={activeRoom?.id === supportRoom.id} onClick={() => selectRoom(supportRoom)} currentUser={user?.username ?? ''} />
-            ) : (
-              <div style={{ padding: '2rem 1rem', textAlign: 'center' }}>
-                <p style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🛟</p>
-                <p style={{ fontSize: '0.775rem', color: '#5c4228', lineHeight: 1.6, marginBottom: '0.75rem' }}>Send a message to the AIM support team for help with your account or transactions.</p>
-                <button onClick={openSupportRoom} className="btn btn-primary btn-sm">Start Support Chat</button>
-              </div>
-            )
-          )}
-        </div>
-      </aside>
-
-      {/* ── Main panel ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {activeRoom ? (
-          <>
-            {/* Header */}
-            <header style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid rgba(75,52,34,0.4)', background: 'rgba(34,26,15,0.85)', display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-              <Avatar name={activeRoom.type === 'support' ? 'S' : otherName[0] ?? '?'} size={38} gradient={avatarGrad} />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  {activeRoom.type === 'support' ? (
-                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#d3af86' }}>AIM Support Team</span>
-                  ) : (
-                    <Link href={`/seller/${otherName}`} style={{ fontSize: '0.9rem', fontWeight: 700, color: '#d3af86', textDecoration: 'none' }}>{otherName}</Link>
-                  )}
-                  {activeRoom.type === 'support' && <span style={{ fontSize: '0.65rem', padding: '0.12rem 0.45rem', borderRadius: '999px', background: 'rgba(57,173,181,0.12)', border: '1px solid rgba(57,173,181,0.25)', color: '#39adb5' }}>Official Support</span>}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.1rem' }}>
-                  <StatusDot connected={wsReady} />
-                  <span style={{ fontSize: '0.68rem', color: wsReady ? '#a0b85e' : '#5c4228' }}>
-                    {wsReady ? 'Connected · end-to-end encrypted' : 'Connecting…'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Private key button */}
-              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                {activeRoom.type !== 'support' && (
-                  !privateKey ? (
-                    <button onClick={() => setShowPkModal(true)}
-                      style={{ padding: '0.3rem 0.7rem', borderRadius: '7px', background: 'rgba(247,154,50,0.1)', border: '1px solid rgba(247,154,50,0.25)', color: '#f79a32', fontSize: '0.72rem', cursor: 'pointer' }}>
-                      🔑 Load Key
-                    </button>
-                  ) : (
-                    <span style={{ fontSize: '0.68rem', padding: '0.2rem 0.5rem', borderRadius: '999px', background: 'rgba(136,155,74,0.1)', border: '1px solid rgba(136,155,74,0.25)', color: '#a0b85e' }}>🔓 Key loaded</span>
-                  )
-                )}
-              </div>
-            </header>
-
-            {/* Messages */}
-            <section aria-label="Messages" aria-live="polite"
-              style={{ flex: 1, overflowY: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              {loadingMsgs ? (
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div className="spinner" style={{ width: '20px', height: '20px' }} />
-                </div>
-              ) : messages.length === 0 ? (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                  <p style={{ fontSize: '2rem' }}>{activeRoom.type === 'support' ? '🛟' : '🔐'}</p>
-                  <p style={{ fontSize: '0.8rem', color: '#5c4228' }}>
-                    {activeRoom.type === 'support' ? 'Describe your issue and our team will respond shortly.' : 'No messages yet — say hello!'}
-                  </p>
-                </div>
-              ) : (
-                messages.map((msg, idx) => {
-                  const isMine = (msg.sender === user?.username) || (msg.sender_username === user?.username);
-                  const text   = isMine ? (msg.encrypted_message.length < 500 ? msg.encrypted_message : '[Sent encrypted]') : tryDecrypt(msg);
-                  const ts     = msg.timestamp || msg.created_at || '';
-                  const time   = ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-
-                  return (
-                    <article key={msg.id + idx} style={{ display: 'flex', justifyContent: isMine ? 'flex-end' : 'flex-start', gap: '0.45rem', alignItems: 'flex-end' }}>
-                      {!isMine && <Avatar name={activeRoom.type === 'support' ? 'S' : otherName} size={26} gradient={avatarGrad} />}
-                      <div style={{
-                        maxWidth: '64%',
-                        borderRadius: isMine ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                        padding: '0.6rem 0.9rem',
-                        background: isMine ? 'linear-gradient(135deg,#f79a32,#c85a1a)' : 'rgba(60,40,24,0.92)',
-                        border: isMine ? 'none' : '1px solid rgba(75,52,34,0.5)',
-                      }}>
-                        <p style={{ fontSize: '0.85rem', color: isMine ? '#fff' : '#d3af86', lineHeight: 1.55, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{text}</p>
-                        <p style={{ fontSize: '0.62rem', color: isMine ? 'rgba(255,255,255,0.6)' : '#5c4228', marginTop: '0.2rem', textAlign: 'right' }}>{time}</p>
-                      </div>
-                      {isMine && <Avatar name={user?.username ?? ''} size={26} />}
-                    </article>
-                  );
-                })
-              )}
-              <div ref={endRef} />
-            </section>
-
-            {/* Input bar */}
-            <footer style={{ padding: '0.875rem 1.25rem', borderTop: '1px solid rgba(75,52,34,0.4)', background: 'rgba(34,26,15,0.92)', display: 'flex', gap: '0.6rem', alignItems: 'center', flexShrink: 0 }}>
-              <input
-                ref={inputRef}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                placeholder={wsReady ? (activeRoom.type === 'support' ? 'Describe your issue…' : 'Message… (enter to send)') : 'Connecting…'}
-                disabled={!wsReady}
-                style={{ flex: 1, borderRadius: '12px', fontSize: '0.875rem', opacity: wsReady ? 1 : 0.5 }}
-                aria-label="Type a message"
-                id="chat-message-input"
-              />
-              <button
-                id="chat-send-btn"
-                onClick={sendMessage}
-                disabled={!input.trim() || !wsReady}
-                aria-label="Send message"
-                style={{
-                  width: '42px', height: '42px', borderRadius: '12px', flexShrink: 0, border: 'none',
-                  background: !input.trim() || !wsReady ? 'rgba(75,52,34,0.4)' : 'linear-gradient(135deg,#f79a32,#dc3d22)',
-                  cursor: !input.trim() || !wsReady ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease',
-                }}
-              >
-                <svg style={{ width: '18px', height: '18px', color: '#fff' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </button>
-            </footer>
-          </>
-        ) : (
-          /* Empty state */
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', padding: '2rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem' }}>💬</div>
-            <h2 style={{ fontSize: '1.125rem', marginBottom: '0.2rem' }}>Your Messages</h2>
-            <p style={{ fontSize: '0.85rem', color: '#8a7359', maxWidth: '300px', lineHeight: 1.65 }}>
-              Select a conversation on the left, or visit a{' '}
-              <Link href="/listings" style={{ color: '#f79a32' }}>listing</Link> and click{' '}
-              <strong style={{ color: '#d3af86' }}>Message Seller</strong> to start a secure chat.
+    <main className="flex h-screen bg-background overflow-hidden animate-fade-in pt-[50px] group-[.is-dashboard]:pt-0">
+      <Dialog open={showPkModal} onOpenChange={setShowPkModal}>
+        <DialogContent className="glass border-white/10 sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                <Key className="w-6 h-6 text-blue-500" />
+                Initialize Decryption
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground font-bold uppercase tracking-widest text-[10px]">
+                Enter RSA Private Key for E2EE Access
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-xs text-muted-foreground font-medium leading-relaxed">
+                Paste the private key (.pem) you downloaded during registration. This key never leaves your browser and is only used to decrypt incoming messages locally.
             </p>
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <Link href="/listings" className="btn btn-primary btn-sm">🛒 Browse Listings</Link>
-              <button onClick={openSupportRoom} disabled={loadingSupport} className="btn btn-secondary btn-sm">
-                {loadingSupport ? '…' : '🛟 Contact Support'}
-              </button>
-            </div>
-            <div style={{ marginTop: '0.75rem', padding: '0.6rem 1rem', background: 'rgba(57,173,181,0.07)', border: '1px solid rgba(57,173,181,0.2)', borderRadius: '8px', fontSize: '0.72rem', color: '#39adb5', maxWidth: '320px' }}>
-              🔒 Every message is RSA-encrypted end-to-end before leaving your device.
-            </div>
+            <textarea 
+                value={pkInput} 
+                onChange={e => setPkInput(e.target.value)}
+                placeholder="-----BEGIN RSA PRIVATE KEY-----"
+                className="w-full h-40 bg-black/40 border border-white/10 rounded-2xl p-4 text-white font-mono text-xs focus:outline-none focus:border-blue-500/50 resize-none transition-all shadow-inner"
+            />
           </div>
-        )}
+          <DialogFooter>
+            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setShowPkModal(false)}>Cancel</Button>
+            <Button className="rounded-xl bg-blue-500 hover:bg-blue-600 font-black" onClick={savePrivateKey}>Decipher Securely</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sidebar */}
+      <div className="w-80 border-r border-white/5 bg-white/5 flex flex-col overflow-hidden">
+        <div className="p-6 border-b border-white/5 space-y-6">
+            <h1 className="text-xl font-black text-white tracking-tight">Comms <span className="text-blue-500">Node</span></h1>
+            <div className="flex gap-1 p-1 bg-black/20 rounded-xl">
+                <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className={cn("flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest h-9", tab === 'messages' ? "bg-white/10 text-white" : "text-muted-foreground")}
+                    onClick={() => setTab('messages')}
+                >
+                    Messages
+                </Button>
+                <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className={cn("flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest h-9", tab === 'support' ? "bg-white/10 text-white" : "text-muted-foreground")}
+                    onClick={() => { setTab('support'); openSupportRoom(); }}
+                >
+                    Support
+                </Button>
+            </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-1 p-3">
+            {tab === 'messages' ? (
+                rooms.length === 0 ? (
+                    <div className="py-20 text-center space-y-4 px-6">
+                        <MessageSquare className="w-10 h-10 text-muted-foreground mx-auto opacity-10" />
+                        <p className="text-xs text-muted-foreground font-black uppercase tracking-widest">No Active Nodes</p>
+                    </div>
+                ) : (
+                    rooms.map(room => (
+                        <button 
+                            key={room.id}
+                            onClick={() => selectRoom(room)}
+                            className={cn(
+                                "w-full p-4 rounded-2xl flex items-center gap-4 transition-all group",
+                                activeRoom?.id === room.id ? "bg-blue-500/10 border border-blue-500/20" : "hover:bg-white/5 border border-transparent"
+                            )}
+                        >
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-blue-500/10">
+                                {room.other_user?.username?.[0]?.toUpperCase() || '?'}
+                            </div>
+                            <div className="flex-1 text-left min-w-0">
+                                <div className="flex justify-between items-center mb-0.5">
+                                    <p className={cn("font-bold text-sm truncate", activeRoom?.id === room.id ? "text-white" : "text-muted-foreground group-hover:text-white")}>@{room.other_user?.username}</p>
+                                    {room.unread_count > 0 && <Badge className="h-4 px-1.5 min-w-[16px] text-[8px] bg-blue-500">{room.unread_count}</Badge>}
+                                </div>
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight truncate">🔒 E2EE Link Secured</p>
+                            </div>
+                        </button>
+                    ))
+                )
+            ) : (
+                <button 
+                    onClick={openSupportRoom}
+                    className={cn(
+                        "w-full p-4 rounded-2xl flex items-center gap-4 transition-all group",
+                        activeRoom?.id === supportRoom?.id ? "bg-blue-500/10 border border-blue-500/20" : "hover:bg-white/5 border border-transparent"
+                    )}
+                >
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-blue-500/10">
+                        <Headset className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                        <p className={cn("font-bold text-sm truncate", activeRoom?.id === supportRoom?.id ? "text-white" : "text-muted-foreground group-hover:text-white")}>AIM Network Support</p>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight truncate">Official Protocol Help</p>
+                    </div>
+                </button>
+            )}
+        </div>
       </div>
 
-      {/* ── Private Key Modal ── */}
-      {showPkModal && (
-        <div onClick={() => setShowPkModal(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
-          <div onClick={e => e.stopPropagation()} className="card" style={{ maxWidth: '440px', width: '100%', padding: '1.75rem' }}>
-            <h3 style={{ fontSize: '1rem', marginBottom: '0.4rem' }}>🔑 Load Private Key</h3>
-            <p style={{ fontSize: '0.775rem', color: '#8a7359', marginBottom: '1rem', lineHeight: 1.6 }}>
-              Paste the private key (.pem) you downloaded during registration. It stays in your browser only — never uploaded.
-            </p>
-            <textarea value={pkInput} onChange={e => setPkInput(e.target.value)}
-              placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"
-              rows={6} style={{ width: '100%', fontFamily: 'monospace', fontSize: '0.72rem', resize: 'vertical', marginBottom: '0.75rem' }} />
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => setShowPkModal(false)} className="btn btn-ghost" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
-              <button onClick={savePrivateKey} disabled={!pkInput.trim()} className="btn btn-primary" style={{ flex: 2, justifyContent: 'center', opacity: pkInput.trim() ? 1 : 0.4 }}>
-                🔓 Load & Decrypt
-              </button>
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col bg-black/40">
+        {activeRoom ? (
+            <>
+                <header className="h-20 border-b border-white/5 bg-white/5 px-8 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className={cn(
+                            "w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-xl shadow-blue-500/10",
+                            activeRoom.type === 'support' ? "bg-blue-600 shadow-blue-500/10" : "bg-gradient-to-br from-blue-600 to-cyan-500 shadow-blue-500/10"
+                        )}>
+                            {activeRoom.type === 'support' ? <Headset className="w-6 h-6" /> : otherName[0]?.toUpperCase()}
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h2 className="font-black text-white tracking-tight">{otherName}</h2>
+                                {activeRoom.type === 'support' && <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-[8px] h-4">OFFICIAL</Badge>}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", wsReady ? "bg-green-500" : "bg-muted-foreground")} />
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{wsReady ? "Network Active" : "Initializing..."}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        {!privateKey ? (
+                            <Button variant="outline" className="h-10 rounded-xl border-blue-500/30 bg-blue-500/10 text-blue-500 text-[10px] font-black uppercase tracking-widest px-6" onClick={() => setShowPkModal(true)}>
+                                <Key className="w-3.5 h-3.5 mr-2" /> Load Private Key
+                            </Button>
+                        ) : (
+                            <Badge variant="outline" className="h-10 rounded-xl border-green-500/30 bg-green-500/10 text-green-500 text-[10px] font-black uppercase tracking-widest px-6">
+                                <ShieldCheck className="w-3.5 h-3.5 mr-2" /> Cipher Active
+                            </Badge>
+                        )}
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-white rounded-xl">
+                            <MoreVertical className="w-5 h-5" />
+                        </Button>
+                    </div>
+                </header>
+
+                <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                    {loadingMsgs ? (
+                        <div className="flex flex-col items-center justify-center h-full gap-4">
+                            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Decrypting Local Ledger...</p>
+                        </div>
+                    ) : messages.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full gap-4 opacity-20">
+                            <Lock className="w-16 h-16 text-white" />
+                            <p className="font-bold text-white uppercase text-xs tracking-widest">Secure Channel Initialized</p>
+                        </div>
+                    ) : (
+                        messages.map((msg, i) => {
+                            const isMine = (msg.sender === user?.username) || (msg.sender_username === user?.username);
+                            const text = isMine ? msg.encrypted_message : tryDecrypt(msg);
+                            const time = new Date(msg.timestamp || msg.created_at || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            
+                            return (
+                                <div key={i} className={cn("flex items-end gap-3", isMine ? "flex-row-reverse" : "flex-row")}>
+                                    <div className={cn(
+                                        "max-w-[70%] p-4 rounded-3xl text-sm font-medium leading-relaxed shadow-lg transition-all",
+                                        isMine 
+                                            ? "bg-gradient-to-br from-blue-600 to-cyan-500 text-white rounded-br-none shadow-blue-500/10" 
+                                            : "bg-white/5 border border-white/5 text-muted-foreground rounded-bl-none shadow-black/20"
+                                    )}>
+                                        <p className="whitespace-pre-wrap">{text}</p>
+                                        <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-2", isMine ? "text-white/60" : "text-muted-foreground/40")}>{time}</p>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                    <div ref={endRef} />
+                </div>
+
+                <footer className="p-6 bg-white/5 border-t border-white/5 px-8">
+                    <div className="max-w-4xl mx-auto flex items-center gap-4 bg-black/40 p-2 pl-4 rounded-2xl border border-white/5 focus-within:border-blue-500/50 transition-all">
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-white rounded-xl">
+                            <Paperclip className="w-5 h-5" />
+                        </Button>
+                        <Input 
+                            ref={inputRef}
+                            value={input}
+                            onChange={e => setInput(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMessage())}
+                            placeholder={wsReady ? "Transmit encrypted data..." : "Re-establishing connection..."}
+                            className="bg-transparent border-none focus-visible:ring-0 text-white font-medium h-12"
+                            disabled={!wsReady}
+                        />
+                        <Button 
+                            onClick={sendMessage}
+                            disabled={!input.trim() || !wsReady}
+                            className="w-12 h-12 rounded-xl bg-blue-500 hover:bg-blue-600 shadow-xl shadow-blue-500/20 transition-all"
+                        >
+                            <Send className="w-5 h-5" />
+                        </Button>
+                    </div>
+                </footer>
+            </>
+        ) : (
+            <div className="flex-1 flex flex-col items-center justify-center space-y-8 p-12 text-center animate-in fade-in duration-700">
+                <div className="w-24 h-24 bg-white/5 rounded-[2.5rem] flex items-center justify-center border border-white/10 group transition-all">
+                    <MessageSquare className="w-10 h-10 text-muted-foreground group-hover:scale-110 group-hover:text-blue-500 transition-all" />
+                </div>
+                <div className="max-w-md space-y-4">
+                    <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Comms <span className="text-gradient">Hub</span></h2>
+                    <p className="text-muted-foreground font-medium leading-relaxed">
+                        Secure, zero-knowledge communication node. All transmissions are RSA-encrypted before broadcast. Select a peer to begin decryption.
+                    </p>
+                </div>
+                <div className="flex gap-4">
+                    <Button variant="outline" className="rounded-2xl h-12 px-8 border-white/10 font-black uppercase text-xs tracking-widest" asChild>
+                        <Link href="/listings">Browse Market</Link>
+                    </Button>
+                    <Button className="rounded-2xl h-12 px-8 bg-blue-600 hover:bg-blue-700 font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-500/20" onClick={openSupportRoom}>
+                        <Headset className="w-4 h-4 mr-2" /> Support Node
+                    </Button>
+                </div>
             </div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </main>
   );
 }
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={<main style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div className="spinner" style={{ width: '28px', height: '28px' }} /></main>}>
+    <Suspense fallback={null}>
       <ChatPageInner />
     </Suspense>
   );

@@ -5,6 +5,27 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiService } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Search, 
+  Filter, 
+  ShoppingBag, 
+  ShieldCheck, 
+  Star, 
+  Eye, 
+  Bookmark, 
+  ChevronLeft, 
+  ChevronRight,
+  Lock,
+  ArrowRight,
+  TrendingUp,
+  Clock,
+  LayoutGrid
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const CATEGORIES = ['All', 'Forex', 'Crypto', 'E-commerce', 'Freelancing', 'Affiliate', 'Real Estate', 'Other'];
 
@@ -17,14 +38,18 @@ interface Listing {
 
 function StarRating({ score }: { score: number }) {
   return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-      {[1,2,3,4,5].map(i => (
-        <svg key={i} style={{ width: '11px', height: '11px', color: i <= Math.round(score) ? '#f79a32' : '#4b3422' }} fill="currentColor" viewBox="0 0 20 20">
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-        </svg>
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star 
+          key={i} 
+          className={cn(
+            "w-3 h-3",
+            i <= Math.round(score) ? "fill-blue-500 text-blue-500" : "text-muted-foreground/30"
+          )} 
+        />
       ))}
-      <span style={{ color: '#8a7359', fontSize: '0.7rem', marginLeft: '2px' }}>{score.toFixed(1)}</span>
-    </span>
+      <span className="text-[10px] font-black text-muted-foreground ml-1">{score.toFixed(1)}</span>
+    </div>
   );
 }
 
@@ -42,49 +67,64 @@ function ListingCard({ listing }: { listing: Listing }) {
   };
 
   return (
-    <Link href={`/listing/${listing.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-      <div className="card" style={{ height: '100%', position: 'relative' }}>
-        {listing.is_featured && (
-          <span className="badge badge-orange" style={{ position: 'absolute', top: '0.75rem', right: '0.75rem' }}>
-            Featured
-          </span>
-        )}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-          <span className="badge badge-teal">{listing.category_name || 'General'}</span>
-          {isAuthenticated && (
-            <button onClick={toggleSave} style={{ background: 'none', border: 'none', cursor: 'pointer', color: saved ? '#f79a32' : '#5c4228', padding: '0.2rem' }}>
-              <svg style={{ width: '16px', height: '16px' }} fill={saved ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-              </svg>
-            </button>
-          )}
-        </div>
-        <h3 className="line-clamp-2" style={{ fontSize: '0.875rem', marginBottom: '0.4rem' }}>{listing.title}</h3>
-        <p className="line-clamp-2" style={{ fontSize: '0.775rem', color: '#8a7359', marginBottom: '0.6rem' }}>
-          {listing.preview_content}
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginBottom: '0.6rem' }}>
-          {listing.tags_list.slice(0, 3).map(tag => (
-            <span key={tag} style={{ fontSize: '0.675rem', color: '#8a7359', background: 'rgba(75,52,34,0.5)', padding: '0.15rem 0.45rem', borderRadius: '999px' }}>
-              #{tag}
-            </span>
-          ))}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(75,52,34,0.4)', paddingTop: '0.6rem' }}>
-          <div>
-            <p className="text-gradient" style={{ fontSize: '1rem', fontWeight: 800 }}>₦{Number(listing.price).toLocaleString()}</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.15rem' }}>
-              <span style={{ fontSize: '0.675rem', color: '#5c4228' }}>by</span>
-              <span style={{ fontSize: '0.675rem', color: '#c0a472', fontWeight: 600 }}>{listing.seller_username}</span>
-              <StarRating score={listing.seller_reputation} />
+    <Link href={`/listing/${listing.id}`}>
+      <Card className="glass border-white/5 overflow-hidden group hover:border-blue-500/20 transition-all hover-glow h-full flex flex-col">
+        <CardHeader className="p-0 relative h-2 items-center justify-center">
+            {listing.is_featured && (
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-cyan-500 shadow-[0_0_10px_rgba(247,154,50,0.5)]" />
+            )}
+        </CardHeader>
+        <CardContent className="p-6 flex-1 flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <Badge variant="secondary" className="bg-white/5 text-[9px] font-black uppercase text-white/60 tracking-widest rounded-md">
+              {listing.category_name || 'General'}
+            </Badge>
+            {isAuthenticated && (
+              <button 
+                onClick={toggleSave} 
+                className={cn(
+                    "p-2 rounded-xl transition-colors",
+                    saved ? "bg-blue-500/10 text-blue-500" : "text-muted-foreground hover:text-white"
+                )}
+              >
+                <Bookmark className={cn("w-4 h-4", saved && "fill-current")} />
+              </button>
+            )}
+          </div>
+
+          <div className="flex-1 space-y-3">
+            <h3 className="text-lg font-black text-white leading-tight line-clamp-2 group-hover:text-blue-500 transition-colors">
+              {listing.title}
+            </h3>
+            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+              {listing.preview_content}
+            </p>
+            
+            <div className="flex flex-wrap gap-1.5 py-2">
+                {listing.tags_list.slice(0, 3).map(tag => (
+                  <span key={tag} className="text-[9px] font-bold text-muted-foreground/60 uppercase">#{tag}</span>
+                ))}
             </div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: '0.675rem', color: '#5c4228' }}>{listing.purchase_count} sold</p>
-            <p style={{ fontSize: '0.675rem', color: '#5c4228' }}>{listing.view_count} views</p>
+
+          <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
+            <div>
+                <p className="text-xl font-black text-white tracking-tighter">₦{Number(listing.price).toLocaleString()}</p>
+                <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase">@{listing.seller_username}</span>
+                    <StarRating score={listing.seller_reputation} />
+                </div>
+            </div>
+            <div className="text-right">
+                <div className="flex items-center gap-2 text-[10px] font-black text-muted-foreground uppercase">
+                    <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3 text-green-500" /> {listing.purchase_count}</span>
+                    <span className="flex items-center gap-1"><Eye className="w-3 h-3 text-blue-500" /> {listing.view_count}</span>
+                </div>
+                <div className="mt-1 text-[9px] font-bold text-muted-foreground/40 italic uppercase">Secure Escrow</div>
+            </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </Link>
   );
 }
@@ -123,158 +163,197 @@ export default function MarketplacePage() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [search]);
 
-  /* ── Auth loading skeleton — AFTER all hooks ── */
   if (isLoading) return (
-    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <span className="spinner" style={{ width: '20px', height: '20px', borderWidth: '2px' }} />
-    </main>
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <p className="text-muted-foreground font-black uppercase tracking-widest text-[10px]">Accessing Marketplace...</p>
+    </div>
   );
 
-  /* ── Not logged in → premium locked wall — AFTER all hooks ── */
   if (!isAuthenticated) return (
-    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-      <div style={{ maxWidth: '420px', width: '100%', textAlign: 'center' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
-        <h1 style={{ fontSize: '1.375rem', marginBottom: '0.5rem' }}>
-          <span className="text-gradient">Members-only</span> Marketplace
-        </h1>
-        <p style={{ fontSize: '0.875rem', color: '#8a7359', lineHeight: 1.7, marginBottom: '1.5rem' }}>
-          The AIM Marketplace is only accessible to registered members.
-          Create a free anonymous account — no email or ID required.
-        </p>
-        <div className="card" style={{ padding: '1.5rem', marginBottom: '1.25rem', textAlign: 'left' }}>
-          {['End-to-end encrypted listings', 'Escrow-protected payments', '12-hour escrow window', 'AI-generated anonymous identity'].map(f => (
-            <div key={f} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem', color: '#c0a472', marginBottom: '0.5rem' }}>
-              <span style={{ color: '#889b4a', flexShrink: 0 }}>✓</span>{f}
-            </div>
-          ))}
+    <main className="min-h-screen flex items-center justify-center p-6 pt-32 bg-background">
+      <div className="max-w-xl w-full text-center space-y-8 animate-fade-in">
+        <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl shadow-blue-500/20">
+          <Lock className="w-10 h-10 text-white" />
         </div>
-        <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center' }}>
-          <Link href="/register" className="btn btn-primary">Create Free Account →</Link>
-          <Link href="/login"    className="btn btn-secondary">Sign In</Link>
+        <div className="space-y-4">
+          <h1 className="text-4xl font-black text-white tracking-tight">
+            Encrypted <span className="text-gradient">Marketplace</span>
+          </h1>
+          <p className="text-muted-foreground leading-relaxed font-medium">
+            The AIM network requires authenticated credentials to browse active intelligence assets. Our protocol ensures complete anonymity and zero-knowledge protection.
+          </p>
         </div>
-        <p style={{ marginTop: '1rem', fontSize: '0.725rem', color: '#5c4228' }}>
-          Already know what you need?{' '}
-          <Link href="/features" style={{ color: '#8a7359' }}>Learn how AIM works →</Link>
+
+        <Card className="glass border-white/5 text-left p-2">
+            <CardContent className="grid gap-4 py-6">
+                {[
+                    { label: 'End-to-End Encryption', desc: 'Listing content is browser-sealed' },
+                    { label: 'Escrow Protection', desc: 'Secure funds release after verification' },
+                    { label: 'Anonymous Identity', desc: 'Zero identity exposure required' }
+                ].map((f, i) => (
+                    <div key={i} className="flex items-center gap-4 group">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-500/20 transition-colors">
+                            <ShieldCheck className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-black text-white uppercase tracking-tight">{f.label}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase">{f.desc}</p>
+                        </div>
+                    </div>
+                ))}
+            </CardContent>
+        </Card>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+          <Button className="h-14 px-8 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-500/20" asChild>
+            <Link href="/register">Initialize Account</Link>
+          </Button>
+          <Button variant="outline" className="h-14 px-8 rounded-2xl border-white/10 text-white font-black uppercase text-xs tracking-widest hover:bg-white/5" asChild>
+            <Link href="/login">Resume Session</Link>
+          </Button>
+        </div>
+        
+        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] pt-8">
+          AIM — Distributed Intelligence Network
         </p>
       </div>
     </main>
   );
 
   return (
-    <main style={{ minHeight: '100vh' }}>
-      {/* Page header */}
-      <section style={{
-        borderBottom: '1px solid rgba(75,52,34,0.4)',
-        background: 'rgba(44,31,18,0.4)',
-        padding: '2rem 0 1.5rem',
-      }}>
-        <div className="container">
-          <h1 style={{ marginBottom: '0.4rem' }}>
-            <span className="text-gradient">Browse</span> the Marketplace
-          </h1>
-          <p style={{ fontSize: '0.8375rem', color: '#8a7359', marginBottom: '1.25rem' }}>
-            Verified earning strategies — encrypted end-to-end, escrow-protected.
-          </p>
-          {/* Search */}
-          <div style={{ position: 'relative', maxWidth: '480px' }}>
-            <svg style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#8a7359' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              id="listing-search"
-              type="text"
-              placeholder="Search listings, strategies, keywords…"
+    <main className="min-h-screen pb-24 pt-32">
+      {/* Search Header */}
+      <section className="bg-white/5 border-b border-white/5 py-16 px-6">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div>
+            <h1 className="text-4xl font-black text-white tracking-tight mb-2">
+              Browse <span className="text-gradient">Marketplace</span>
+            </h1>
+            <p className="text-muted-foreground font-bold uppercase tracking-widest text-[10px]">
+              {listings.length} Active Intelligence Assets Found
+            </p>
+          </div>
+
+          <div className="relative max-w-2xl group">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
+            <Input 
+              placeholder="Search listings, strategies, keywords..." 
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ width: '100%', paddingLeft: '2.25rem', paddingRight: '1rem' }}
+              className="h-16 pl-14 bg-black/40 border-white/10 rounded-2xl focus:border-blue-500/50 text-white font-bold shadow-2xl"
             />
           </div>
         </div>
       </section>
 
-      <div className="container" style={{ paddingTop: '1.5rem', paddingBottom: '3rem' }}>
-        {/* Filters */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+        {/* Filters Row */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          <div className="flex flex-wrap gap-2">
             {CATEGORIES.map(cat => (
-              <button
+              <Badge 
                 key={cat}
+                variant={category === cat ? "default" : "outline"}
+                className={cn(
+                    "cursor-pointer px-5 py-2 rounded-full font-black uppercase text-[10px] tracking-widest transition-all",
+                    category === cat ? "bg-blue-500 text-white" : "border-white/10 text-muted-foreground hover:border-white/20 hover:text-white"
+                )}
                 onClick={() => { setCategory(cat); setPage(1); }}
-                style={{
-                  padding: '0.3rem 0.75rem',
-                  borderRadius: '5px',
-                  fontSize: '0.775rem',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  border: '1px solid',
-                  transition: 'all 0.15s ease',
-                  background:   category === cat ? 'rgba(247,154,50,0.15)' : '#3c2818',
-                  color:        category === cat ? '#f79a32'               : '#8a7359',
-                  borderColor:  category === cat ? 'rgba(247,154,50,0.4)'  : '#4b3422',
-                }}
               >
                 {cat}
-              </button>
+              </Badge>
             ))}
           </div>
-          <select
-            id="listing-sort"
-            value={sort}
-            onChange={e => setSort(e.target.value)}
-            style={{ marginLeft: 'auto', minWidth: '140px' }}
-          >
-            <option value="-created_at">Newest</option>
-            <option value="price">Price: Low → High</option>
-            <option value="-price">Price: High → Low</option>
-            <option value="-purchase_count">Most Popular</option>
-            <option value="-view_count">Most Viewed</option>
-          </select>
+
+          <div className="flex items-center gap-4 w-full lg:w-auto">
+            <div className="relative flex-1 lg:min-w-[200px]">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <select 
+                    value={sort}
+                    onChange={e => setSort(e.target.value)}
+                    className="w-full h-11 pl-10 pr-4 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white appearance-none focus:outline-none focus:border-blue-500/50"
+                >
+                    <option value="-created_at">Newest Deployment</option>
+                    <option value="price">Price: Low → High</option>
+                    <option value="-price">Price: High → Low</option>
+                    <option value="-purchase_count">High Reputation</option>
+                </select>
+            </div>
+            <Button variant="outline" className="h-11 w-11 rounded-xl border-white/10 p-0 hover:bg-white/5">
+                <LayoutGrid className="w-4 h-4 text-white" />
+            </Button>
+          </div>
         </div>
 
-        {/* Grid */}
+        {/* Listings Grid */}
         {loading ? (
-          <div className="grid-container grid-responsive">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[...Array(8)].map((_, i) => (
-              <div key={i} style={{ background: '#3c2818', borderRadius: '13px', height: '200px', opacity: 0.6 }}
-                   className="fade-in" />
+              <div key={i} className="h-[300px] bg-white/5 border border-white/5 rounded-3xl animate-pulse" />
             ))}
           </div>
         ) : listings.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-            <p style={{ color: '#5c4228', fontSize: '0.9rem' }}>No listings found.</p>
-            <Link href="/dashboard/create" style={{ color: '#f79a32', fontSize: '0.8rem', display: 'inline-block', marginTop: '0.5rem' }}>
-              Be the first to list →
-            </Link>
+          <div className="text-center py-32 space-y-6">
+            <div className="w-20 h-20 bg-white/5 rounded-[2rem] flex items-center justify-center mx-auto border border-white/5">
+                <ShoppingBag className="w-8 h-8 text-muted-foreground/30" />
+            </div>
+            <div className="space-y-2">
+                <p className="text-white font-black uppercase tracking-tight text-xl">No Intelligence Assets Found</p>
+                <p className="text-muted-foreground text-sm">Modify your filters or deploy a new asset to the marketplace.</p>
+            </div>
+            <Button className="rounded-full bg-blue-500 font-bold px-8" asChild>
+                <Link href="/dashboard/create">Deploy New Asset</Link>
+            </Button>
           </div>
         ) : (
-          <div className="grid-container grid-responsive">
-            {listings.map(l => <ListingCard key={l.id} listing={l} />)}
-          </div>
-        )}
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in duration-700 slide-in-from-bottom-4">
+              {listings.map(l => <ListingCard key={l.id} listing={l} />)}
+            </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.3rem', marginTop: '2rem' }}>
-            {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setPage(i + 1)}
-                style={{
-                  width: '32px', height: '32px',
-                  borderRadius: '5px',
-                  fontSize: '0.775rem', fontWeight: 500,
-                  cursor: 'pointer', border: '1px solid',
-                  background:   page === i + 1 ? 'rgba(247,154,50,0.15)' : '#3c2818',
-                  color:        page === i + 1 ? '#f79a32'               : '#8a7359',
-                  borderColor:  page === i + 1 ? 'rgba(247,154,50,0.4)'  : '#4b3422',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 pt-12">
+                <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="rounded-xl border-white/10 hover:bg-white/5 disabled:opacity-20"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                </Button>
+                
+                <div className="flex items-center gap-2">
+                    {[...Array(totalPages)].map((_, i) => (
+                        <Button 
+                            key={i}
+                            variant={page === i + 1 ? "default" : "outline"}
+                            size="sm"
+                            className={cn(
+                                "w-10 h-10 rounded-xl font-black text-[10px] transition-all",
+                                page === i + 1 ? "bg-blue-500 text-white" : "border-white/10 text-muted-foreground hover:bg-white/5"
+                            )}
+                            onClick={() => setPage(i + 1)}
+                        >
+                            {i + 1}
+                        </Button>
+                    ))}
+                </div>
+
+                <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="rounded-xl border-white/10 hover:bg-white/5 disabled:opacity-20"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                >
+                    <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>

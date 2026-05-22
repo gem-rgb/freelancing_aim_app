@@ -11,6 +11,7 @@ class User(AbstractUser):
     USER_TYPE_CHOICES = [
         ('buyer', 'Buyer'),
         ('seller', 'Seller'),
+        ('manager', 'Manager'),
     ]
     
     username = models.CharField(max_length=50, unique=True)

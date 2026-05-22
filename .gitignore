@@ -1,0 +1,33 @@
+# Python virtual environment
+backend/venv/
+backend/venv/win/
+
+# Python cache files
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# Django local database and logs
+backend/db.sqlite3
+backend/debug.log
+backend/*.log
+
+# Environment variables
+backend/.env
+backend/.env.production
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Node/Next.js dependencies and build outputs
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# OS files
+.DS_Store
+Thumbs.db
